@@ -92,6 +92,14 @@ refer to the <a href="https://apps.csiontario.ca/api/swagger/" target="_blank" c
 available endpoints, parameters, and response formats.</p>
 <p>Below are some common use cases for interacting with the API
 endpoints using <code>csiapps</code>.</p>
+<blockquote>
+<p><strong>Note:</strong> By default, <code>csiapps</code> runs in
+<strong>sandbox mode</strong>, so the <code><a href="../reference/make_request.html">make_request()</a></code> calls
+below are routed to a local, in-memory warehouse rather than the
+production API. This lets you develop and test safely without touching
+production data. See <a href="#sandbox-mode">Sandbox Mode</a> below for
+how it works and how it is turned off for deployment.</p>
+</blockquote>
 </div>
 <div class="section level3">
 <h3 id="authorization-status">Authorization Status<a class="anchor" aria-label="anchor" href="#authorization-status"></a>
@@ -238,15 +246,44 @@ test data to the production warehouse. Sandbox requests are routed to an
 in-memory warehouse that validates records against a registered JSON
 schema (using the <code>jsonvalidate</code> package) and stores accepted
 payloads locally.</p>
-<p>Enable sandbox mode globally with an R option, or per session with
-the <code>CSIAPPS_ENV=sandbox</code> environment variable:</p>
+<p><strong>Sandbox mode is enabled by default.</strong> Every one of the
+<code><a href="../reference/make_request.html">make_request()</a></code> calls shown earlier in this vignette runs
+against the local sandbox until sandbox mode is explicitly turned off.
+Every sandboxed request also prints a <code>csiapps sandbox:</code>
+message, so it is always visible that no real API call was made.</p>
+<p>To turn sandbox mode off — for example, when deploying a finished app
+to production — set the R option to <code>FALSE</code>, or the
+<code>CSIAPPS_ENV</code> environment variable to
+<code>"production"</code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>csiapps.sandbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Every sandboxed request prints a <code>csiapps sandbox:</code>
-message so it is always visible that no real API call was made.
-Individual calls can also override the global setting with the
-<code>sandbox</code> argument,
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>csiapps.sandbox <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># route requests to the production warehouse</span></span></code></pre></div>
+<p>The <code>sandbox</code> argument of <code><a href="../reference/make_request.html">make_request()</a></code> can
+also override the global setting for an individual call,
 e.g. <code>make_request(..., sandbox = FALSE)</code>.</p>
+<div class="section level4">
+<h4 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
+</h4>
+<p>Follow these two practices so that apps transition cleanly from
+sandbox to production:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Do not set the <code>csiapps.sandbox</code> option (or
+the <code>sandbox</code> argument) in your app code.</strong> Rely on
+the default. Because sandbox mode is on by default, your app runs safely
+in the sandbox during development without any configuration. Hard-coding
+<code>options(csiapps.sandbox = TRUE)</code> in committed code would
+override the deployer’s attempt to turn sandbox off, causing the
+deployed app to silently serve sandbox data.</p></li>
+<li><p><strong>Turn sandbox off only at deployment, in a location the
+deployer controls.</strong> Sandbox mode should be disabled when the
+finished app is deployed — typically by setting
+<code>options(csiapps.sandbox = FALSE)</code> in the app’s
+<code>global.R</code> (or an <code>Rprofile.site</code>) at deployment
+time, or by setting <code>CSIAPPS_ENV=production</code> in the
+production environment. Keeping this out of your app code means the same
+code runs in the sandbox during development and against production once
+deployed, with no edits in between.</p></li>
+</ol>
+</div>
 <div class="section level4">
 <h4 id="registering-a-data-source">Registering a Data Source<a class="anchor" aria-label="anchor" href="#registering-a-data-source"></a>
 </h4>

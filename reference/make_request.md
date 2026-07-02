@@ -73,9 +73,9 @@ make_request(
   real REST API: no network call is made and no authentication is
   required. Defaults to
   [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md),
-  so sandbox mode can be enabled globally with
-  `options(csiapps.sandbox = TRUE)` (or `CSIAPPS_ENV=sandbox`) without
-  editing individual calls. See
+  which is **TRUE by default**. Disable sandbox mode globally with
+  `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to
+  route requests to the production warehouse. See
   [csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
   for supported endpoints and limitations.
 

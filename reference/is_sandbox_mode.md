@@ -2,9 +2,12 @@
 
 Determines the default value of the `sandbox` argument of
 [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
-Sandbox mode is enabled when the `csiapps.sandbox` R option is `TRUE`,
-or, if the option is unset, when the `CSIAPPS_ENV` environment variable
-equals `"sandbox"`.
+**Sandbox mode is enabled by default**, so that requests never reach the
+production warehouse unless it is explicitly turned off. It is disabled
+when the `csiapps.sandbox` R option is set to `FALSE`, or, if that
+option is unset, when the `CSIAPPS_ENV` environment variable equals
+`"production"`. The R option, when set, always takes precedence over the
+environment variable.
 
 ## Usage
 
@@ -24,11 +27,11 @@ for an overview of sandbox mode
 ## Examples
 
 ``` r
+is_sandbox_mode() # TRUE by default
+#> [1] TRUE
+
+options(csiapps.sandbox = FALSE) # turn sandbox off (e.g. for deployment)
 is_sandbox_mode()
 #> [1] FALSE
-
-options(csiapps.sandbox = TRUE)
-is_sandbox_mode()
-#> [1] TRUE
 options(csiapps.sandbox = NULL)
 ```

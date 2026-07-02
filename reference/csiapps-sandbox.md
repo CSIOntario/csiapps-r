@@ -2,14 +2,18 @@
 
 Sandbox mode lets developers run the full schema -\> validate -\> ingest
 -\> retrieve warehouse workflow entirely locally, with no network access
-and no authentication. Enable it globally with
-`options(csiapps.sandbox = TRUE)` (or by setting the
-`CSIAPPS_ENV=sandbox` environment variable), or per call with
-`make_request(..., sandbox = TRUE)`. Production scripts require no
-changes: the same
+and no authentication. **Sandbox mode is enabled by default**, so that
+development work never reaches the production warehouse by accident: the
+same
 [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
 calls are routed to a local, in-memory warehouse instead of the REST
-API.
+API. It is disabled for deployment with
+`options(csiapps.sandbox = FALSE)` (or by setting
+`CSIAPPS_ENV=production`), and can be overridden per call with the
+`sandbox` argument of
+[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+Because the production and sandbox workflows use the same calls, no code
+changes are needed when moving from development to deployment.
 
 The sandbox emulates three endpoints:
 

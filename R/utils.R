@@ -289,21 +289,28 @@ exchange_code_for_token <- function(code, code_verifier = NULL) {
 #' Check whether sandbox mode is enabled globally
 #'
 #' Determines the default value of the `sandbox` argument of [make_request()].
-#' Sandbox mode is enabled when the `csiapps.sandbox` R option is `TRUE`, or,
-#' if the option is unset, when the `CSIAPPS_ENV` environment variable equals
-#' `"sandbox"`.
+#' **Sandbox mode is enabled by default**, so that requests never reach the
+#' production warehouse unless it is explicitly turned off. It is disabled when
+#' the `csiapps.sandbox` R option is set to `FALSE`, or, if that option is
+#' unset, when the `CSIAPPS_ENV` environment variable equals `"production"`.
+#' The R option, when set, always takes precedence over the environment
+#' variable.
 #'
 #' @return logical; `TRUE` if sandbox mode is enabled globally
 #' @seealso [csiapps-sandbox] for an overview of sandbox mode
 #' @export
 #' @examples
-#' is_sandbox_mode()
+#' is_sandbox_mode() # TRUE by default
 #'
-#' options(csiapps.sandbox = TRUE)
+#' options(csiapps.sandbox = FALSE) # turn sandbox off (e.g. for deployment)
 #' is_sandbox_mode()
 #' options(csiapps.sandbox = NULL)
 is_sandbox_mode <- function() {
-  isTRUE(getOption("csiapps.sandbox", Sys.getenv("CSIAPPS_ENV") == "sandbox"))
+  opt <- getOption("csiapps.sandbox", NULL)
+  if (!is.null(opt)) return(isTRUE(opt))          # explicit option always wins
+  env <- Sys.getenv("CSIAPPS_ENV")
+  if (nzchar(env)) return(!identical(env, "production")) # only "production" disables
+  TRUE                                            # nothing set -> sandbox ON
 }
 
 #' Make an authenticated API request to CSIAPPS
@@ -320,9 +327,10 @@ is_sandbox_mode <- function() {
 #' @param max_pages Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops
 #' @param sandbox If TRUE, the request is routed to the local sandbox instead of
 #' the real REST API: no network call is made and no authentication is required.
-#' Defaults to [is_sandbox_mode()], so sandbox mode can be enabled globally with
-#' `options(csiapps.sandbox = TRUE)` (or `CSIAPPS_ENV=sandbox`) without editing
-#' individual calls. See [csiapps-sandbox] for supported endpoints and limitations.
+#' Defaults to [is_sandbox_mode()], which is **TRUE by default**. Disable sandbox
+#' mode globally with `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`)
+#' to route requests to the production warehouse. See [csiapps-sandbox] for
+#' supported endpoints and limitations.
 #'
 #' @return List of parsed API responses
 #' @export

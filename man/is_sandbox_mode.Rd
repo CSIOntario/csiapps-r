@@ -11,14 +11,17 @@ logical; \code{TRUE} if sandbox mode is enabled globally
 }
 \description{
 Determines the default value of the \code{sandbox} argument of \code{\link[=make_request]{make_request()}}.
-Sandbox mode is enabled when the \code{csiapps.sandbox} R option is \code{TRUE}, or,
-if the option is unset, when the \code{CSIAPPS_ENV} environment variable equals
-\code{"sandbox"}.
+\strong{Sandbox mode is enabled by default}, so that requests never reach the
+production warehouse unless it is explicitly turned off. It is disabled when
+the \code{csiapps.sandbox} R option is set to \code{FALSE}, or, if that option is
+unset, when the \code{CSIAPPS_ENV} environment variable equals \code{"production"}.
+The R option, when set, always takes precedence over the environment
+variable.
 }
 \examples{
-is_sandbox_mode()
+is_sandbox_mode() # TRUE by default
 
-options(csiapps.sandbox = TRUE)
+options(csiapps.sandbox = FALSE) # turn sandbox off (e.g. for deployment)
 is_sandbox_mode()
 options(csiapps.sandbox = NULL)
 }

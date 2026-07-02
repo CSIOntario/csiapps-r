@@ -14,7 +14,8 @@ make_request(
   timeout = 20L,
   verbose = FALSE,
   paginate = FALSE,
-  max_pages = 50
+  max_pages = 50,
+  sandbox = is_sandbox_mode()
 )
 }
 \arguments{
@@ -37,6 +38,12 @@ make_request(
 \item{paginate}{If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.}
 
 \item{max_pages}{Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops}
+
+\item{sandbox}{If TRUE, the request is routed to the local sandbox instead of
+the real REST API: no network call is made and no authentication is required.
+Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, so sandbox mode can be enabled globally with
+\code{options(csiapps.sandbox = TRUE)} (or \code{CSIAPPS_ENV=sandbox}) without editing
+individual calls. See \link{csiapps-sandbox} for supported endpoints and limitations.}
 }
 \value{
 List of parsed API responses

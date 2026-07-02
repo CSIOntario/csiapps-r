@@ -17,4 +17,13 @@ reference:
     Functions for interfacing with the CSIAPPS REST API.
   contents:
   - make_request
+- subtitle: Sandbox
+  desc: |
+    Functions for simulating warehouse workflows in a local sandbox.
+  contents:
+  - csiapps-sandbox
+  - is_sandbox_mode
+  - register_sandbox_schema
+  - clear_sandbox
+  - browse_sandbox
 

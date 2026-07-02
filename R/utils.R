@@ -286,6 +286,26 @@ exchange_code_for_token <- function(code, code_verifier = NULL) {
 }
 
 
+#' Check whether sandbox mode is enabled globally
+#'
+#' Determines the default value of the `sandbox` argument of [make_request()].
+#' Sandbox mode is enabled when the `csiapps.sandbox` R option is `TRUE`, or,
+#' if the option is unset, when the `CSIAPPS_ENV` environment variable equals
+#' `"sandbox"`.
+#'
+#' @return logical; `TRUE` if sandbox mode is enabled globally
+#' @seealso [csiapps-sandbox] for an overview of sandbox mode
+#' @export
+#' @examples
+#' is_sandbox_mode()
+#'
+#' options(csiapps.sandbox = TRUE)
+#' is_sandbox_mode()
+#' options(csiapps.sandbox = NULL)
+is_sandbox_mode <- function() {
+  isTRUE(getOption("csiapps.sandbox", Sys.getenv("CSIAPPS_ENV") == "sandbox"))
+}
+
 #' Make an authenticated API request to CSIAPPS
 #'
 #' @param endpoint API endpoint path.
@@ -298,10 +318,53 @@ exchange_code_for_token <- function(code, code_verifier = NULL) {
 #' @param verbose If TRUE, prints request and response details to the console for debugging purposes
 #' @param paginate If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.
 #' @param max_pages Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops
+#' @param sandbox If TRUE, the request is routed to the local sandbox instead of
+#' the real REST API: no network call is made and no authentication is required.
+#' Defaults to [is_sandbox_mode()], so sandbox mode can be enabled globally with
+#' `options(csiapps.sandbox = TRUE)` (or `CSIAPPS_ENV=sandbox`) without editing
+#' individual calls. See [csiapps-sandbox] for supported endpoints and limitations.
 #'
 #' @return List of parsed API responses
 #' @export
 make_request <- function(
+    endpoint,
+    method = "GET",
+    body = NULL,
+    query = list(),
+    headers = list(),
+    token = Sys.getenv("CSIAPPS_ACCESS_TOKEN"),
+    timeout = 20L,
+    verbose = FALSE,
+    paginate = FALSE,
+    max_pages = 50,
+    sandbox = is_sandbox_mode()
+  ) {
+  if (isTRUE(sandbox)) {
+    return(.make_sandbox_request(
+      endpoint = endpoint,
+      method   = method,
+      body     = body,
+      query    = query,
+      verbose  = verbose,
+      paginate = paginate
+    ))
+  }
+
+  .make_http_request(
+    endpoint  = endpoint,
+    method    = method,
+    body      = body,
+    query     = query,
+    headers   = headers,
+    token     = token,
+    timeout   = timeout,
+    verbose   = verbose,
+    paginate  = paginate,
+    max_pages = max_pages
+  )
+}
+
+.make_http_request <- function(
     endpoint,
     method = "GET",
     body = NULL,

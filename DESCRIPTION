@@ -8,7 +8,7 @@ Description: Helper functions and utilities for CSI data warehouse ingestion and
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: 
     httr2,
     jsonlite,
@@ -17,7 +17,10 @@ Imports:
     shinyjs
 URL: https://github.com/CSIOntario/csiapps, https://csiontario.github.io/csiapps/
 BugReports: https://github.com/CSIOntario/csiapps/issues
-Suggests: 
+Suggests:
+    jsonvalidate,
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
+Config/testthat/edition: 3

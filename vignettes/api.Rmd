@@ -162,3 +162,104 @@ records <- make_request(
     paginate = TRUE
     )
 ```
+
+### Sandbox Mode
+
+`csiapps` includes a local sandbox that emulates the warehouse endpoints above, so
+ingestion pipelines can be developed and tested with no network access, no
+authentication, and no risk of writing test data to the production warehouse.
+Sandbox requests are routed to an in-memory warehouse that validates records
+against a registered JSON schema (using the `jsonvalidate` package) and stores
+accepted payloads locally.
+
+Enable sandbox mode globally with an R option, or per session with the
+`CSIAPPS_ENV=sandbox` environment variable:
+
+```{r}
+options(csiapps.sandbox = TRUE)
+```
+
+Every sandboxed request prints a `csiapps sandbox:` message so it is always
+visible that no real API call was made. Individual calls can also override the
+global setting with the `sandbox` argument, e.g. `make_request(..., sandbox = FALSE)`.
+
+#### Registering a Data Source
+
+The sandbox needs a schema to validate against. Register one under any
+identifying string — a real production uuid is not required:
+
+```{r}
+register_sandbox_schema("dummy-1234", "path/to/schema.json")
+```
+
+The schema may be an R list, a JSON string, or a path to a JSON file.
+
+#### The Sandbox Workflow
+
+From here, the workflow is *identical* to the production examples above — the
+same `make_request()` calls, with the dummy uuid in place of `Sys.getenv("SOURCE_UUID")`:
+
+```{r}
+# Retrieve the registered schema
+data_source <- make_request(
+  endpoint = paste0("api/warehouse/data-sources/", "dummy-1234")
+)
+schema <- data_source$head_primary_definition$schema
+
+# Ingest records (validated against the schema before acceptance)
+result <- make_request(
+  endpoint = "api/warehouse/ingestion/primary/",
+  method = "POST",
+  body = list(
+    source = "dummy-1234",
+    records = records,
+    subject_field = "id"
+  )
+)
+
+# Retrieve ingested records
+records <- make_request(
+  endpoint = "api/warehouse/data-records",
+  query = list(source_uuid = "dummy-1234"),
+  paginate = TRUE
+)
+```
+
+Records that fail schema validation are rejected with an error describing
+exactly which records failed and why. When code is ready for production,
+disable sandbox mode and swap in the real source uuid — no other changes are
+needed.
+
+#### Inspecting and Resetting the Sandbox
+
+Accepted payloads are written as pretty-printed JSON files, one folder per data
+source, so the exact JSON that would have been sent to the API can be inspected:
+
+```{r}
+browse_sandbox("dummy-1234") # opens the payload folder in the file explorer
+```
+
+To reset state between tests, clear a single source or the entire sandbox:
+
+```{r}
+clear_sandbox("dummy-1234") # clear one source
+clear_sandbox()             # clear everything
+```
+
+#### Limitations
+
+The sandbox faithfully simulates the *schema contract*, not the warehouse.
+Anything that depends on server-side state will differ from production:
+
+-   **Validation parity is approximate.** The sandbox validates records against
+    the JSON Schema only. The real server additionally enforces things the
+    schema cannot express: resolution of `subject_field` values against
+    registered profiles, duplicate handling against existing data, and token
+    permissions. Passing sandbox validation is a *necessary but not sufficient*
+    condition for production acceptance.
+-   **`subject` is always `NULL` in retrieved records.** The sandbox has no
+    profile registry, so it cannot emulate the server's record-to-profile
+    linkage. Code that displays or filters on subject fields will see
+    placeholder values in sandbox mode.
+
+See `?"csiapps-sandbox"` for full details.

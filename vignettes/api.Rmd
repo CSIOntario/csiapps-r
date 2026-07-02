@@ -29,9 +29,15 @@ The following environment variables must be set to make requests to the `CSIAPPS
 
 `csiapps` includes a generic `make_request()` function to make requests to the `CSIAPPS` REST API.
 Please refer to the [CSIAPPS Swagger documentation](https://apps.csiontario.ca/api/swagger/){target="_blank"}
-for full details on available endpoints, parameters, and response formats. 
+for full details on available endpoints, parameters, and response formats.
 
 Below are some common use cases for interacting with the API endpoints using `csiapps`.
+
+> **Note:** By default, `csiapps` runs in **sandbox mode**, so the `make_request()`
+> calls below are routed to a local, in-memory warehouse rather than the production
+> API. This lets you develop and test safely without touching production data. See
+> [Sandbox Mode](#sandbox-mode) below for how it works and how it is turned off for
+> deployment.
 
 ### Authorization Status
 
@@ -172,16 +178,41 @@ Sandbox requests are routed to an in-memory warehouse that validates records
 against a registered JSON schema (using the `jsonvalidate` package) and stores
 accepted payloads locally.
 
-Enable sandbox mode globally with an R option, or per session with the
-`CSIAPPS_ENV=sandbox` environment variable:
+**Sandbox mode is enabled by default.** Every one of the `make_request()` calls
+shown earlier in this vignette runs against the local sandbox until sandbox mode
+is explicitly turned off. Every sandboxed request also prints a
+`csiapps sandbox:` message, so it is always visible that no real API call was made.
+
+To turn sandbox mode off — for example, when deploying a finished app to
+production — set the R option to `FALSE`, or the `CSIAPPS_ENV` environment
+variable to `"production"`:
 
 ```{r}
-options(csiapps.sandbox = TRUE)
+options(csiapps.sandbox = FALSE) # route requests to the production warehouse
 ```
 
-Every sandboxed request prints a `csiapps sandbox:` message so it is always
-visible that no real API call was made. Individual calls can also override the
-global setting with the `sandbox` argument, e.g. `make_request(..., sandbox = FALSE)`.
+The `sandbox` argument of `make_request()` can also override the global setting
+for an individual call, e.g. `make_request(..., sandbox = FALSE)`.
+
+#### Best Practices
+
+Follow these two practices so that apps transition cleanly from sandbox to
+production:
+
+1.  **Do not set the `csiapps.sandbox` option (or the `sandbox` argument) in your
+    app code.** Rely on the default. Because sandbox mode is on by default, your
+    app runs safely in the sandbox during development without any configuration.
+    Hard-coding `options(csiapps.sandbox = TRUE)` in committed code would override
+    the deployer's attempt to turn sandbox off, causing the deployed app to
+    silently serve sandbox data.
+
+2.  **Turn sandbox off only at deployment, in a location the deployer controls.**
+    Sandbox mode should be disabled when the finished app is deployed — typically
+    by setting `options(csiapps.sandbox = FALSE)` in the app's `global.R` (or an
+    `Rprofile.site`) at deployment time, or by setting `CSIAPPS_ENV=production` in
+    the production environment. Keeping this out of your app code means the same
+    code runs in the sandbox during development and against production once
+    deployed, with no edits in between.
 
 #### Registering a Data Source
 

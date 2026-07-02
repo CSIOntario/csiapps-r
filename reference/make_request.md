@@ -15,7 +15,8 @@ make_request(
   timeout = 20L,
   verbose = FALSE,
   paginate = FALSE,
-  max_pages = 50
+  max_pages = 50,
+  sandbox = is_sandbox_mode()
 )
 ```
 
@@ -65,6 +66,18 @@ make_request(
 
   Maximum number of pages to fetch when paginate = TRUE; defaults to 50
   to prevent infinite loops
+
+- sandbox:
+
+  If TRUE, the request is routed to the local sandbox instead of the
+  real REST API: no network call is made and no authentication is
+  required. Defaults to
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md),
+  so sandbox mode can be enabled globally with
+  `options(csiapps.sandbox = TRUE)` (or `CSIAPPS_ENV=sandbox`) without
+  editing individual calls. See
+  [csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+  for supported endpoints and limitations.
 
 ## Value
 

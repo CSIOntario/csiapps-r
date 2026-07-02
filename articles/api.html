@@ -189,7 +189,7 @@ field of the response.</p>
 <code>auto_unbox = TRUE</code> when converting the JSON objects to
 strings.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">json_schema</span> <span class="op">&lt;-</span> <span class="fu">jsonvalidate</span><span class="fu">::</span><span class="va">json_schema</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">schema</span>, auto_unbox <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">json_schema</span> <span class="op">&lt;-</span> <span class="fu">jsonvalidate</span><span class="fu">::</span><span class="va"><a href="https://docs.ropensci.org/jsonvalidate/reference/json_schema.html" class="external-link">json_schema</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">schema</span>, auto_unbox <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">validate_record</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">record</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">json_schema</span><span class="op">$</span><span class="fu">validate</span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">record</span>, auto_unbox <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
@@ -227,6 +227,109 @@ retrieve all records matching the query parameters.</p>
 <span>    query <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>source_uuid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"SOURCE_UUID"</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    paginate <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>    <span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="sandbox-mode">Sandbox Mode<a class="anchor" aria-label="anchor" href="#sandbox-mode"></a>
+</h3>
+<p><code>csiapps</code> includes a local sandbox that emulates the
+warehouse endpoints above, so ingestion pipelines can be developed and
+tested with no network access, no authentication, and no risk of writing
+test data to the production warehouse. Sandbox requests are routed to an
+in-memory warehouse that validates records against a registered JSON
+schema (using the <code>jsonvalidate</code> package) and stores accepted
+payloads locally.</p>
+<p>Enable sandbox mode globally with an R option, or per session with
+the <code>CSIAPPS_ENV=sandbox</code> environment variable:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>csiapps.sandbox <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>Every sandboxed request prints a <code>csiapps sandbox:</code>
+message so it is always visible that no real API call was made.
+Individual calls can also override the global setting with the
+<code>sandbox</code> argument,
+e.g. <code>make_request(..., sandbox = FALSE)</code>.</p>
+<div class="section level4">
+<h4 id="registering-a-data-source">Registering a Data Source<a class="anchor" aria-label="anchor" href="#registering-a-data-source"></a>
+</h4>
+<p>The sandbox needs a schema to validate against. Register one under
+any identifying string — a real production uuid is not required:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/register_sandbox_schema.html">register_sandbox_schema</a></span><span class="op">(</span><span class="st">"dummy-1234"</span>, <span class="st">"path/to/schema.json"</span><span class="op">)</span></span></code></pre></div>
+<p>The schema may be an R list, a JSON string, or a path to a JSON
+file.</p>
+</div>
+<div class="section level4">
+<h4 id="the-sandbox-workflow">The Sandbox Workflow<a class="anchor" aria-label="anchor" href="#the-sandbox-workflow"></a>
+</h4>
+<p>From here, the workflow is <em>identical</em> to the production
+examples above — the same <code><a href="../reference/make_request.html">make_request()</a></code> calls, with the
+dummy uuid in place of <code>Sys.getenv("SOURCE_UUID")</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Retrieve the registered schema</span></span>
+<span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
+<span>  endpoint <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"api/warehouse/data-sources/"</span>, <span class="st">"dummy-1234"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="va">data_source</span><span class="op">$</span><span class="va">head_primary_definition</span><span class="op">$</span><span class="va">schema</span></span>
+<span></span>
+<span><span class="co"># Ingest records (validated against the schema before acceptance)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
+<span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/ingestion/primary/"</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"POST"</span>,</span>
+<span>  body <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    source <span class="op">=</span> <span class="st">"dummy-1234"</span>,</span>
+<span>    records <span class="op">=</span> <span class="va">records</span>,</span>
+<span>    subject_field <span class="op">=</span> <span class="st">"id"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Retrieve ingested records</span></span>
+<span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
+<span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/data-records"</span>,</span>
+<span>  query <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>source_uuid <span class="op">=</span> <span class="st">"dummy-1234"</span><span class="op">)</span>,</span>
+<span>  paginate <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Records that fail schema validation are rejected with an error
+describing exactly which records failed and why. When code is ready for
+production, disable sandbox mode and swap in the real source uuid — no
+other changes are needed.</p>
+</div>
+<div class="section level4">
+<h4 id="inspecting-and-resetting-the-sandbox">Inspecting and Resetting the Sandbox<a class="anchor" aria-label="anchor" href="#inspecting-and-resetting-the-sandbox"></a>
+</h4>
+<p>Accepted payloads are written as pretty-printed JSON files, one
+folder per data source, so the exact JSON that would have been sent to
+the API can be inspected:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/browse_sandbox.html">browse_sandbox</a></span><span class="op">(</span><span class="st">"dummy-1234"</span><span class="op">)</span> <span class="co"># opens the payload folder in the file explorer</span></span></code></pre></div>
+<p>To reset state between tests, clear a single source or the entire
+sandbox:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/clear_sandbox.html">clear_sandbox</a></span><span class="op">(</span><span class="st">"dummy-1234"</span><span class="op">)</span> <span class="co"># clear one source</span></span>
+<span><span class="fu"><a href="../reference/clear_sandbox.html">clear_sandbox</a></span><span class="op">(</span><span class="op">)</span>             <span class="co"># clear everything</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
+</h4>
+<p>The sandbox faithfully simulates the <em>schema contract</em>, not
+the warehouse. Anything that depends on server-side state will differ
+from production:</p>
+<ul>
+<li>
+<strong>Validation parity is approximate.</strong> The sandbox
+validates records against the JSON Schema only. The real server
+additionally enforces things the schema cannot express: resolution of
+<code>subject_field</code> values against registered profiles, duplicate
+handling against existing data, and token permissions. Passing sandbox
+validation is a <em>necessary but not sufficient</em> condition for
+production acceptance.</li>
+<li>
+<strong><code>subject</code> is always <code>NULL</code> in
+retrieved records.</strong> The sandbox has no profile registry, so it
+cannot emulate the server’s record-to-profile linkage. Code that
+displays or filters on subject fields will see placeholder values in
+sandbox mode.</li>
+</ul>
+<p>See <code><a href="../reference/csiapps-sandbox.html">?"csiapps-sandbox"</a></code> for full details.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -24,3 +24,18 @@ Functions for interfacing with the CSIAPPS REST API.
 
 - [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
   : Make an authenticated API request to CSIAPPS
+
+### Sandbox
+
+Functions for simulating warehouse workflows in a local sandbox.
+
+- [`csiapps-sandbox`](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+  : Sandbox mode for local development
+- [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md)
+  : Check whether sandbox mode is enabled globally
+- [`register_sandbox_schema()`](https://csiontario.github.io/csiapps/reference/register_sandbox_schema.md)
+  : Register a JSON schema in the local sandbox
+- [`clear_sandbox()`](https://csiontario.github.io/csiapps/reference/clear_sandbox.md)
+  : Clear the local sandbox
+- [`browse_sandbox()`](https://csiontario.github.io/csiapps/reference/browse_sandbox.md)
+  : Open the sandbox payload directory in the system file explorer

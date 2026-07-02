@@ -41,9 +41,10 @@ make_request(
 
 \item{sandbox}{If TRUE, the request is routed to the local sandbox instead of
 the real REST API: no network call is made and no authentication is required.
-Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, so sandbox mode can be enabled globally with
-\code{options(csiapps.sandbox = TRUE)} (or \code{CSIAPPS_ENV=sandbox}) without editing
-individual calls. See \link{csiapps-sandbox} for supported endpoints and limitations.}
+Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, which is \strong{TRUE by default}. Disable sandbox
+mode globally with \code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production})
+to route requests to the production warehouse. See \link{csiapps-sandbox} for
+supported endpoints and limitations.}
 }
 \value{
 List of parsed API responses

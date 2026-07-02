@@ -6,11 +6,14 @@
 \description{
 Sandbox mode lets developers run the full schema -> validate -> ingest ->
 retrieve warehouse workflow entirely locally, with no network access and no
-authentication. Enable it globally with \code{options(csiapps.sandbox = TRUE)}
-(or by setting the \code{CSIAPPS_ENV=sandbox} environment variable), or per call
-with \code{make_request(..., sandbox = TRUE)}. Production scripts require no
-changes: the same \code{\link[=make_request]{make_request()}} calls are routed to a local, in-memory
-warehouse instead of the REST API.
+authentication. \strong{Sandbox mode is enabled by default}, so that development
+work never reaches the production warehouse by accident: the same
+\code{\link[=make_request]{make_request()}} calls are routed to a local, in-memory warehouse instead of
+the REST API. It is disabled for deployment with
+\code{options(csiapps.sandbox = FALSE)} (or by setting \code{CSIAPPS_ENV=production}),
+and can be overridden per call with the \code{sandbox} argument of
+\code{\link[=make_request]{make_request()}}. Because the production and sandbox workflows use the same
+calls, no code changes are needed when moving from development to deployment.
 
 The sandbox emulates three endpoints:
 \itemize{

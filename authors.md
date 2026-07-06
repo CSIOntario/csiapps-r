@@ -5,17 +5,19 @@
 - **David Awosoga**. Author, maintainer, copyright holder.
   [](https://orcid.org/0000-0002-2741-5770)
 
+- **Kyu Min Shim**. Author. [](https://orcid.org/0009-0006-4161-9813)
+
 ## Citation
 
 Source:
 [`DESCRIPTION`](https://github.com/CSIOntario/csiapps/blob/main/DESCRIPTION)
 
-Awosoga D (2026). *csiapps: Helper functions for CSIAPPS*. R package
-version 0.1.0, <https://github.com/CSIOntario/csiapps>.
+Awosoga D, Shim K (2026). *csiapps: Helper functions for CSIAPPS*. R
+package version 0.1.0, <https://github.com/CSIOntario/csiapps>.
 
     @Manual{,
       title = {csiapps: Helper functions for CSIAPPS},
-      author = {David Awosoga},
+      author = {David Awosoga and Kyu Min Shim},
       year = {2026},
       note = {R package version 0.1.0},
       url = {https://github.com/CSIOntario/csiapps},

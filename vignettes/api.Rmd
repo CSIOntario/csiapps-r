@@ -55,6 +55,80 @@ result <- make_request(
 ```
 
 
+### Registration API
+
+The registration API provides access to profiles and organisations. Unlike the
+warehouse endpoints, these functions always contact the **real** registration
+API when `sandbox = FALSE` — they are not emulated locally. In sandbox mode
+(the default) they return empty results immediately with no network call, so
+dashboards can be built and tested without a live connection.
+
+#### Organisations
+
+`fetch_org_options()` returns all organisations your token can see, formatted
+as `label`/`value` pairs ready for a Shiny `selectInput()`:
+
+```{r}
+set_institute("csiontario")
+
+orgs <- fetch_org_options(sandbox = FALSE)
+# list(list(label = "CSI Ontario", value = 1L), ...)
+```
+
+#### Profiles
+
+`fetch_profiles()` returns all profiles accessible to your token, with
+automatic pagination. Filter by organisation using `sport_org_id`:
+
+```{r}
+profiles <- fetch_profiles(sandbox = FALSE)
+
+# Filter to a specific organisation
+profiles <- fetch_profiles(
+  filters = list(sport_org_id = 42L),
+  sandbox = FALSE
+)
+```
+
+A common pattern across dashboards is converting the profile list into a data
+frame for display or matching:
+
+```{r}
+profile_df <- do.call(rbind, lapply(profiles, function(p) {
+  data.frame(
+    id         = p$id,
+    first_name = p$person$first_name %||% NA_character_,
+    last_name  = p$person$last_name  %||% NA_character_,
+    email      = p$person$email      %||% NA_character_
+  )
+}))
+```
+
+`fetch_profile()` retrieves a single profile by ID:
+
+```{r}
+profile <- fetch_profile(profile_id = 123L, sandbox = FALSE)
+profile$person$first_name
+```
+
+#### Sandbox behaviour
+
+In sandbox mode all three functions return immediately without a network call:
+
+```{r}
+fetch_org_options()  # returns list()  — sandbox = TRUE by default
+fetch_profiles()     # returns list()  — sandbox = TRUE by default
+fetch_profile(123L)  # returns NULL    — sandbox = TRUE by default
+```
+
+To fetch real data during development without turning sandbox off globally,
+pass `sandbox = FALSE` to an individual call:
+
+```{r}
+# One real lookup while sandbox is otherwise on
+orgs <- fetch_org_options(sandbox = FALSE)
+```
+
 ### Data Warehouse Ingestion
 
 To ingest data records into the warehouse, we make a POST request to the `/api/warehouse/ingestion/primary/` endpoint.

@@ -58,7 +58,7 @@ test_that("sandbox seeds the session from an existing access token", {
   # Keep the shared consumer offline: skip /me and stub the org lookup
   testthat::local_mocked_bindings(
     CSIAPPS_USERINFO_URL = function() "",
-    fetch_org_options    = function(token = NULL) list()
+    fetch_org_options    = function(token = NULL, sandbox = is_sandbox_mode()) list()
   )
   server <- server_wrapper(function(input, output, session) {}, sandbox = TRUE)
 
@@ -69,4 +69,30 @@ test_that("sandbox seeds the session from an existing access token", {
     # ...and published to the environment for make_request()/helpers
     expect_identical(Sys.getenv("CSIAPPS_ACCESS_TOKEN"), "dev-token-abc")
   }))
+})
+
+# ---- registration helpers: sandbox mode ------------------------------------
+
+test_that("fetch_org_options returns empty list in sandbox mode", {
+  expect_message(
+    result <- fetch_org_options(sandbox = TRUE),
+    "csiapps sandbox"
+  )
+  expect_identical(result, list())
+})
+
+test_that("fetch_profiles returns empty list in sandbox mode", {
+  expect_message(
+    result <- fetch_profiles(sandbox = TRUE),
+    "csiapps sandbox"
+  )
+  expect_identical(result, list())
+})
+
+test_that("fetch_profile returns NULL in sandbox mode", {
+  expect_message(
+    result <- fetch_profile(profile_id = 1L, sandbox = TRUE),
+    "csiapps sandbox"
+  )
+  expect_null(result)
 })

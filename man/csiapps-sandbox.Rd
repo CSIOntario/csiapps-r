@@ -32,11 +32,34 @@ for \code{query$source_uuid}, each wrapped in the same envelope
 Any other endpoint raises an error. Sandbox state lasts for the R session;
 use \code{\link[=clear_sandbox]{clear_sandbox()}} to reset it between tests.
 }
+\section{Shiny app wrappers}{
+
+Sandbox mode also lets a wrapped Shiny app (see \code{\link[=ui_wrapper]{ui_wrapper()}},
+\code{\link[=server_wrapper]{server_wrapper()}}, \code{\link[=check_secrets]{check_secrets()}}) run locally without the OAuth2
+redirect. The redirect exists only to obtain an access token, and requires
+client credentials that cannot be safely distributed, so in sandbox mode
+\code{\link[=server_wrapper]{server_wrapper()}} \strong{simulates the login} instead: it seeds the session from
+the developer's existing \code{CSIAPPS_ACCESS_TOKEN} and hands it to the same code
+path a production login would. If that token is present, \verb{/me} and the
+organization list are loaded from the \strong{real} registration API, so the
+developer sees their real identity and organizations. If no token is set, the
+app shell still renders but shows an unauthenticated notice prompting the
+developer to set a read-only \code{CSIAPPS_ACCESS_TOKEN}. The same wrapped-app code
+therefore runs in both modes; only the \code{csiapps.sandbox} option differs.
+}
+
 \section{Limitations}{
 
+\itemize{
+\item \strong{Sandbox is not fully offline for wrapped apps.} Warehouse endpoints
+routed through \code{\link[=make_request]{make_request()}} are emulated locally, but the wrapper's
+registration reads (\verb{/me}, organizations, profiles) bypass \code{\link[=make_request]{make_request()}}
+and call the real API with your token. Sandbox mode is thus deliberately
+split: warehouse data is emulated, registration/auth data is real. Set the
+institute with \code{\link[=set_institute]{set_institute()}} to match the institute that issued your
+token, or those reads will be rejected.
 The sandbox faithfully simulates the \emph{schema contract}, not the warehouse.
 Anything that depends on server-side state will differ from production:
-\itemize{
 \item \strong{Validation parity is approximate.} Sandbox ingestion validates records
 against the JSON Schema with Ajv (via \code{jsonvalidate}), which catches the
 most common failure modes (missing required fields, wrong types, length

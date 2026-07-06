@@ -31,9 +31,23 @@ clear_token <- function() {
 #' Function to check that required environment variables for APPS authentication are set and valid
 #'
 #' @param verbose logical; if TRUE, prints the current values of relevant environment variables (masking secrets) to the console
+#' @param sandbox If TRUE, the OAuth secret checks are skipped (sandbox mode
+#' simulates the login and needs no client credentials); instead the presence of
+#' `CSIAPPS_ACCESS_TOKEN` is reported, since that determines whether real
+#' registration data is available. Never errors in sandbox mode. Defaults to
+#' [is_sandbox_mode()]. See [csiapps-sandbox].
 #'
 #' @export
-check_secrets <- function(verbose = F) {
+check_secrets <- function(verbose = F, sandbox = is_sandbox_mode()) {
+
+  if (isTRUE(sandbox)) {
+    if (nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
+      message("csiapps sandbox: CSIAPPS_ACCESS_TOKEN found - real registration reads enabled")
+    } else {
+      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running with a simulated identity (no real data)")
+    }
+    return(invisible(TRUE))
+  }
 
   bad <- character()
   if (!grepl("^https?://", CSIAPPS_AUTH_URL()))      bad <- c(bad, "CSIAPPS_AUTH_URL")

@@ -21,10 +21,21 @@ global_wrapper <- function(code) {
 #' Provides a consistent navbar and footer, and handles authentication redirects.
 #'
 #' @param ... Additional UI elements to include in the main content area
+#' @param sandbox If TRUE, a "sandbox mode" banner is shown so it is obvious the
+#' app is not connected to the live warehouse. Defaults to [is_sandbox_mode()].
+#' See [csiapps-sandbox].
 #'
 #' @return A Shiny UI object with a navbar, footer, and main content area
 #' @export
-ui_wrapper <- function(...) {
+ui_wrapper <- function(..., sandbox = is_sandbox_mode()) {
+  sandbox_banner <- if (isTRUE(sandbox)) {
+    tags$div(
+      class = "text-center small py-1 bg-warning-subtle text-dark border-bottom",
+      style = "background:#fff3cd;",
+      "SANDBOX MODE — not connected to the live warehouse"
+    )
+  }
+
   tagList(
     tags$head(
       tags$script(HTML(
@@ -39,6 +50,7 @@ ui_wrapper <- function(...) {
       tags$link(rel=" shortcut icon", href="https://csiontario.ca/wp-content/uploads/2022/04/cropped-CSIO-Favicon-192x192.png")
     ),
     navbar_ui(),
+    sandbox_banner,
     fluidPage(
       shinyjs::useShinyjs(),
       style = "padding-bottom: 80px;",
@@ -55,10 +67,17 @@ ui_wrapper <- function(...) {
 #' Handles OAuth2 PKCE authentication flow with CSIAPPS, managing user tokens and info, and providing a consistent authentication status UI.
 #'
 #' @param app_specific_logic Existing server logic of shiny web application
+#' @param sandbox If TRUE, the real OAuth2 redirect is skipped and the session is
+#' seeded from the developer's existing `CSIAPPS_ACCESS_TOKEN`, so a wrapped app
+#' can be run locally without client credentials. If no token is set, the app
+#' shell renders with an unauthenticated notice. Defaults to [is_sandbox_mode()],
+#' which is **TRUE by default**. Disable it for deployment with
+#' `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to use the
+#' real login flow. See [csiapps-sandbox] for details and limitations.
 #'
 #' @return A Shiny server function that wraps the provided app-specific logic with authentication handling and user info retrieval.
 #' @export
-server_wrapper <- function(app_specific_logic) {
+server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
   function(input, output, session) {
 
@@ -68,68 +87,82 @@ server_wrapper <- function(app_specific_logic) {
     # org / profile state
     org_options_rv      <- reactiveVal(NULL)
 
-    # ---------------- CSI OAuth2 PKCE flow ----------------
+    if (isTRUE(sandbox)) {
 
-    observe({
-      query <- parseQueryString(session$clientData$url_search)
-      code  <- query$code
-      state <- query$state
-      err   <- query$error
-      err_desc <- query$error_description
+      # ---------------- Sandbox: simulate the redirect ----------------
+      # Skip the OAuth handshake entirely and seed the token from the
+      # environment; the shared observeEvent() below consumes it exactly
+      # as it would a token obtained from a real login.
+      .sandbox_seed_session(user_token, userinfo)
 
-      #message("DEBUG query: ", session$clientData$url_search)
+    } else {
 
-      if (!is.null(err)) {
-        #message("AUTH ERROR from provider: ", err, " - ", err_desc)
-        user_token(list(error = err, error_description = err_desc))
-        clear_token()
-        shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
-        #return()
-      }
+      # ---------------- CSI OAuth2 PKCE flow ----------------
 
-      # 1) No code + no token -> redirect to CSI
-      if (is.null(code) && is.null(user_token())) {
-        pk <- httr2::oauth_flow_auth_code_pkce()
-        st <- pkce_state_encode(pk$verifier)
+      observe({
+        query <- parseQueryString(session$clientData$url_search)
+        code  <- query$code
+        state <- query$state
+        err   <- query$error
+        err_desc <- query$error_description
 
-        csi_client <- httr2::oauth_client(
-          id        = Sys.getenv("CSIAPPS_CLIENT_ID"),
-          token_url = CSIAPPS_TOKEN_URL(),
-          secret    = Sys.getenv("CSIAPPS_CLIENT_SECRET")
-        )
+        #message("DEBUG query: ", session$clientData$url_search)
 
-        auth_url <- httr2::oauth_flow_auth_code_url(
-          client       = csi_client,
-          auth_url     = CSIAPPS_AUTH_URL(),
-          redirect_uri = Sys.getenv("CSIAPPS_REDIRECT_URI"),
-          scope        = Sys.getenv("CSIAPPS_SCOPE", "read write"),
-          auth_params  = list(
-            code_challenge        = pk$challenge,
-            code_challenge_method = pk$method,
-            state                 = st
-          )
-        )
-
-        #message("DEBUG login_url: ", auth_url)
-        session$sendCustomMessage("csip_redirect", auth_url) # not sure what this does
-        return()
-      }
-
-      # 2) Have code but no token yet -> exchange
-      if (!is.null(code) && is.null(user_token())) {
-        verifier <- NULL
-        if (!is.null(state)) {
-          decoded <- pkce_state_decode(state)
-          verifier <- decoded$v
+        if (!is.null(err)) {
+          #message("AUTH ERROR from provider: ", err, " - ", err_desc)
+          user_token(list(error = err, error_description = err_desc))
+          Sys.unsetenv("CSIAPPS_ACCESS_TOKEN")
+          shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+          #return()
         }
-        token <- exchange_code_for_token(code, code_verifier = verifier)
-        #message("DEBUG token payload:"); utils::str(token)
-        #print(token)
-        user_token(token)
-      }
-    })
 
-    # Load /me and update global access token when we get a token
+        # 1) No code + no token -> redirect to CSI
+        if (is.null(code) && is.null(user_token())) {
+          pk <- httr2::oauth_flow_auth_code_pkce()
+          st <- pkce_state_encode(pk$verifier)
+
+          csi_client <- httr2::oauth_client(
+            id        = Sys.getenv("CSIAPPS_CLIENT_ID"),
+            token_url = CSIAPPS_TOKEN_URL(),
+            secret    = Sys.getenv("CSIAPPS_CLIENT_SECRET")
+          )
+
+          auth_url <- httr2::oauth_flow_auth_code_url(
+            client       = csi_client,
+            auth_url     = CSIAPPS_AUTH_URL(),
+            redirect_uri = Sys.getenv("CSIAPPS_REDIRECT_URI"),
+            scope        = Sys.getenv("CSIAPPS_SCOPE", "read write"),
+            auth_params  = list(
+              code_challenge        = pk$challenge,
+              code_challenge_method = pk$method,
+              state                 = st
+            )
+          )
+
+          #message("DEBUG login_url: ", auth_url)
+          session$sendCustomMessage("csip_redirect", auth_url) # not sure what this does
+          return()
+        }
+
+        # 2) Have code but no token yet -> exchange
+        if (!is.null(code) && is.null(user_token())) {
+          verifier <- NULL
+          if (!is.null(state)) {
+            decoded <- pkce_state_decode(state)
+            verifier <- decoded$v
+          }
+          token <- exchange_code_for_token(code, code_verifier = verifier)
+          #message("DEBUG token payload:"); utils::str(token)
+          #print(token)
+          user_token(token)
+        }
+      })
+
+    }
+
+    # Load /me and update global access token when we get a token.
+    # Shared by the production and sandbox paths: in sandbox the token is the
+    # developer's own, so `/me` and org loading hit the real registration API.
     observeEvent(user_token(), {
       tok <- user_token()
 
@@ -149,13 +182,23 @@ server_wrapper <- function(app_specific_logic) {
       # 1) Make token available globally (Warehouse + helpers)
       Sys.setenv(CSIAPPS_ACCESS_TOKEN = access_token)
 
-      # 2) Load /me for first_name / last_name (for header)
+      # 2) Load /me for first_name / last_name (for header). Guarded so an
+      #    expired or rejected token degrades gracefully instead of crashing
+      #    the session (e.g. a stale local token in sandbox mode).
       if (!is.null(CSIAPPS_USERINFO_URL()) && nzchar(CSIAPPS_USERINFO_URL())) {
-        req <- httr2::request(CSIAPPS_USERINFO_URL()) |>
-          httr2::req_auth_bearer_token(access_token)
-        resp  <- httr2::req_perform(req)
-        ui_me <- httr2::resp_body_json(resp, simplifyVector = TRUE)
-        userinfo(ui_me)
+        ui_me <- tryCatch({
+          req <- httr2::request(CSIAPPS_USERINFO_URL()) |>
+            httr2::req_auth_bearer_token(access_token)
+          resp <- httr2::req_perform(req)
+          httr2::resp_body_json(resp, simplifyVector = TRUE)
+        }, error = function(e) {
+          showNotification(
+            paste("Error loading user info:", conditionMessage(e)),
+            type = "error"
+          )
+          NULL
+        })
+        if (!is.null(ui_me)) userinfo(ui_me)
       }
 
       # 3) Load organization list *here* (no separate observer)
@@ -187,12 +230,17 @@ server_wrapper <- function(app_specific_logic) {
         ))
       }
 
+      if (isTRUE(tok$unauthenticated)) {
+        return(tags$p("Not authenticated — set CSIAPPS_ACCESS_TOKEN to use sandbox mode with real data."))
+      }
+
       ui_me <- userinfo()
       name_text <- if (!is.null(ui_me$first_name) && !is.null(ui_me$last_name)) {
         sprintf("Signed in as %s %s", ui_me$first_name, ui_me$last_name)
       } else {
         "Signed in"
       }
+      if (isTRUE(sandbox)) name_text <- paste0(name_text, " (sandbox)")
 
       tagList(
         #br(),
@@ -203,11 +251,16 @@ server_wrapper <- function(app_specific_logic) {
     })
 
     observeEvent(input$logout, {
-      user_token(NULL)
       userinfo(NULL)
-      clear_token()
-      #session$reload()
-      shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+      Sys.unsetenv("CSIAPPS_ACCESS_TOKEN")
+      if (isTRUE(sandbox)) {
+        # No IdP to redirect to; re-seed the simulated session instead
+        .sandbox_seed_session(user_token, userinfo)
+      } else {
+        user_token(NULL)
+        #session$reload()
+        shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+      }
     })
 
     eval(body(app_specific_logic), envir = environment())

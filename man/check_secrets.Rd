@@ -4,10 +4,16 @@
 \alias{check_secrets}
 \title{Function to check that required environment variables for APPS authentication are set and valid}
 \usage{
-check_secrets(verbose = F)
+check_secrets(verbose = F, sandbox = is_sandbox_mode())
 }
 \arguments{
 \item{verbose}{logical; if TRUE, prints the current values of relevant environment variables (masking secrets) to the console}
+
+\item{sandbox}{If TRUE, the OAuth secret checks are skipped (sandbox mode
+simulates the login and needs no client credentials); instead the presence of
+\code{CSIAPPS_ACCESS_TOKEN} is reported, since that determines whether real
+registration data is available. Never errors in sandbox mode. Defaults to
+\code{\link[=is_sandbox_mode]{is_sandbox_mode()}}. See \link{csiapps-sandbox}.}
 }
 \description{
 Function to check that required environment variables for APPS authentication are set and valid

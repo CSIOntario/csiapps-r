@@ -16,7 +16,12 @@ knitr::opts_chunk$set(
 ```
 
 ### Preamble
-The following environment variables must be set before developing a shiny web application within the `CSIAPPS` ecosystem:
+
+By default, `csiapps` runs in **sandbox mode**, so a wrapped app can be developed
+and run locally *without* any of the OAuth client credentials below: the login
+redirect is simulated (see [Sandbox mode](#sandbox-mode) at the end of this
+article). The following environment variables are only required for a real
+deployment, once sandbox mode is turned off:
 
 -   `CSIAPPS_CLIENT_ID`: The client ID for the application registered in CSIAPPS.
 -   `CSIAPPS_CLIENT_SECRET`: The client secret for the application registered in CSIAPPS.
@@ -164,6 +169,38 @@ server <- function(input, output) {
     })
 }
 
-# Run the application 
+# Run the application
 shinyApp(ui = ui_wrapper(ui), server = server_wrapper(server))
+```
+
+### Sandbox mode
+
+The code above is written for production, but you do **not** need any client
+credentials or a running identity provider to develop it. By default `csiapps`
+is in **sandbox mode**, and `server_wrapper()` **simulates the login redirect**:
+instead of sending the browser to CSIAPPS to authenticate, it seeds the session
+from the `CSIAPPS_ACCESS_TOKEN` you already have in your environment.
+
+```{r}
+Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
+```
+
+With that token set, the wrapped app runs locally and the header, organization
+lists, and other registration reads load your **real** identity from the API,
+exactly as they would after a production login. `check_secrets()` reports whether
+a token was found rather than erroring on the (unneeded) OAuth secrets. If no
+token is set, the app shell still renders but shows an unauthenticated notice
+prompting you to set a read-only `CSIAPPS_ACCESS_TOKEN`.
+
+> **Note:** Sandbox mode is deliberately split. Warehouse calls made through
+> `make_request()` are emulated locally (see `vignette("api")`), but the
+> wrapper's registration reads (`/me`, organizations) use your real token
+> against the live API. Call `set_institute()` to match the institute that
+> issued your token.
+
+Because the app code is identical in both modes, deploying is just a matter of
+turning sandbox mode off — no code changes required:
+
+```{r}
+options(csiapps.sandbox = FALSE) # or set CSIAPPS_ENV=production
 ```

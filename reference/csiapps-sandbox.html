@@ -111,11 +111,36 @@ use <code><a href="clear_sandbox.html">clear_sandbox()</a></code> to reset it be
 
 
     <div class="section level2">
+    <h2 id="shiny-app-wrappers">Shiny app wrappers<a class="anchor" aria-label="anchor" href="#shiny-app-wrappers"></a></h2>
+
+
+<p>Sandbox mode also lets a wrapped Shiny app (see <code><a href="ui_wrapper.html">ui_wrapper()</a></code>,
+<code><a href="server_wrapper.html">server_wrapper()</a></code>, <code><a href="check_secrets.html">check_secrets()</a></code>) run locally without the OAuth2
+redirect. The redirect exists only to obtain an access token, and requires
+client credentials that cannot be safely distributed, so in sandbox mode
+<code><a href="server_wrapper.html">server_wrapper()</a></code> <strong>simulates the login</strong> instead: it seeds the session from
+the developer's existing <code>CSIAPPS_ACCESS_TOKEN</code> and hands it to the same code
+path a production login would. If that token is present, <code>/me</code> and the
+organization list are loaded from the <strong>real</strong> registration API, so the
+developer sees their real identity and organizations. If no token is set, the
+app shell still renders but shows an unauthenticated notice prompting the
+developer to set a read-only <code>CSIAPPS_ACCESS_TOKEN</code>. The same wrapped-app code
+therefore runs in both modes; only the <code>csiapps.sandbox</code> option differs.</p>
+    </div>
+    <div class="section level2">
     <h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a></h2>
 
 
-<p>The sandbox faithfully simulates the <em>schema contract</em>, not the warehouse.
-Anything that depends on server-side state will differ from production:</p><ul><li><p><strong>Validation parity is approximate.</strong> Sandbox ingestion validates records
+<ul><li><p><strong>Sandbox is not fully offline for wrapped apps.</strong> Warehouse endpoints
+routed through <code><a href="make_request.html">make_request()</a></code> are emulated locally, but the wrapper's
+registration reads (<code>/me</code>, organizations, profiles) bypass <code><a href="make_request.html">make_request()</a></code>
+and call the real API with your token. Sandbox mode is thus deliberately
+split: warehouse data is emulated, registration/auth data is real. Set the
+institute with <code><a href="set_institute.html">set_institute()</a></code> to match the institute that issued your
+token, or those reads will be rejected.
+The sandbox faithfully simulates the <em>schema contract</em>, not the warehouse.
+Anything that depends on server-side state will differ from production:</p></li>
+<li><p><strong>Validation parity is approximate.</strong> Sandbox ingestion validates records
 against the JSON Schema with Ajv (via <code>jsonvalidate</code>), which catches the
 most common failure modes (missing required fields, wrong types, length
 and pattern violations). The real server additionally enforces things the
@@ -134,7 +159,8 @@ subject fields will see placeholder values, and mistyped <code>subject_field</co
 values that production would flag are accepted silently.</p></li>
 </ul></div>
 
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

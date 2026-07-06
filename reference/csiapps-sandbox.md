@@ -38,11 +38,42 @@ session; use
 [`clear_sandbox()`](https://csiontario.github.io/csiapps/reference/clear_sandbox.md)
 to reset it between tests.
 
+## Shiny app wrappers
+
+Sandbox mode also lets a wrapped Shiny app (see
+[`ui_wrapper()`](https://csiontario.github.io/csiapps/reference/ui_wrapper.md),
+[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md),
+[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md))
+run locally without the OAuth2 redirect. The redirect exists only to
+obtain an access token, and requires client credentials that cannot be
+safely distributed, so in sandbox mode
+[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
+**simulates the login** instead: it seeds the session from the
+developer's existing `CSIAPPS_ACCESS_TOKEN` and hands it to the same
+code path a production login would. If that token is present, `/me` and
+the organization list are loaded from the **real** registration API, so
+the developer sees their real identity and organizations. If no token is
+set, the app shell still renders but shows an unauthenticated notice
+prompting the developer to set a read-only `CSIAPPS_ACCESS_TOKEN`. The
+same wrapped-app code therefore runs in both modes; only the
+`csiapps.sandbox` option differs.
+
 ## Limitations
 
-The sandbox faithfully simulates the *schema contract*, not the
-warehouse. Anything that depends on server-side state will differ from
-production:
+- **Sandbox is not fully offline for wrapped apps.** Warehouse endpoints
+  routed through
+  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+  are emulated locally, but the wrapper's registration reads (`/me`,
+  organizations, profiles) bypass
+  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+  and call the real API with your token. Sandbox mode is thus
+  deliberately split: warehouse data is emulated, registration/auth data
+  is real. Set the institute with
+  [`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+  to match the institute that issued your token, or those reads will be
+  rejected. The sandbox faithfully simulates the *schema contract*, not
+  the warehouse. Anything that depends on server-side state will differ
+  from production:
 
 - **Validation parity is approximate.** Sandbox ingestion validates
   records against the JSON Schema with Ajv (via `jsonvalidate`), which

@@ -42,7 +42,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">server_wrapper</span><span class="op">(</span><span class="va">app_specific_logic</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">server_wrapper</span><span class="op">(</span><span class="va">app_specific_logic</span>, sandbox <span class="op">=</span> <span class="fu"><a href="is_sandbox_mode.html">is_sandbox_mode</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -51,6 +51,16 @@
 
 <dl><dt id="arg-app-specific-logic">app_specific_logic<a class="anchor" aria-label="anchor" href="#arg-app-specific-logic"></a></dt>
 <dd><p>Existing server logic of shiny web application</p></dd>
+
+
+<dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
+<dd><p>If TRUE, the real OAuth2 redirect is skipped and the session is
+seeded from the developer's existing <code>CSIAPPS_ACCESS_TOKEN</code>, so a wrapped app
+can be run locally without client credentials. If no token is set, the app
+shell renders with an unauthenticated notice. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>,
+which is <strong>TRUE by default</strong>. Disable it for deployment with
+<code>options(csiapps.sandbox = FALSE)</code> (or <code>CSIAPPS_ENV=production</code>) to use the
+real login flow. See <a href="csiapps-sandbox.html">csiapps-sandbox</a> for details and limitations.</p></dd>
 
 </dl></div>
     <div class="section level2">

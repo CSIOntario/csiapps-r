@@ -42,7 +42,7 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ui_wrapper</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ui_wrapper</span><span class="op">(</span><span class="va">...</span>, sandbox <span class="op">=</span> <span class="fu"><a href="is_sandbox_mode.html">is_sandbox_mode</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -51,6 +51,12 @@
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional UI elements to include in the main content area</p></dd>
+
+
+<dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
+<dd><p>If TRUE, a "sandbox mode" banner is shown so it is obvious the
+app is not connected to the live warehouse. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>.
+See <a href="csiapps-sandbox.html">csiapps-sandbox</a>.</p></dd>
 
 </dl></div>
     <div class="section level2">

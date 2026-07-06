@@ -45,6 +45,12 @@ Functions for interfacing with the CSIAPPS REST API.
 
 - [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
   : Make an authenticated API request to CSIAPPS
+- [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+  : Fetch organisation options from the CSIAPPS registration API
+- [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  : Fetch profiles from the CSIAPPS registration API
+- [`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+  : Fetch a single profile from the CSIAPPS registration API
 
 ### Sandbox
 

@@ -1,0 +1,50 @@
+# Fetch a single profile from the CSIAPPS registration API
+
+Retrieves one profile by its ID.
+
+## Usage
+
+``` r
+fetch_profile(token = NULL, profile_id, sandbox = is_sandbox_mode())
+```
+
+## Arguments
+
+- token:
+
+  Character. Authentication token. Defaults to the
+  `CSIAPPS_ACCESS_TOKEN` environment variable.
+
+- profile_id:
+
+  Integer or character. The ID of the profile to retrieve.
+
+- sandbox:
+
+  Logical. When `TRUE` (the default in development), no network call is
+  made and `NULL` is returned immediately. Set to `FALSE` for production
+  to fetch the real profile. Defaults to
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
+
+## Value
+
+A single profile object as a list, or `NULL` in sandbox mode. The
+structure mirrors the list elements returned by
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md).
+
+## See also
+
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+to retrieve multiple profiles,
+[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+to configure the target institute.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+set_institute("csiontario")
+profile <- fetch_profile(profile_id = 123L, sandbox = FALSE)
+profile$person$first_name
+} # }
+```

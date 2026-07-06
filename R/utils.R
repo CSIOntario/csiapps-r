@@ -31,9 +31,23 @@ clear_token <- function() {
 #' Function to check that required environment variables for APPS authentication are set and valid
 #'
 #' @param verbose logical; if TRUE, prints the current values of relevant environment variables (masking secrets) to the console
+#' @param sandbox If TRUE, the OAuth secret checks are skipped (sandbox mode
+#' simulates the login and needs no client credentials); instead the presence of
+#' `CSIAPPS_ACCESS_TOKEN` is reported, since that determines whether real
+#' registration data is available. Never errors in sandbox mode. Defaults to
+#' [is_sandbox_mode()]. See [csiapps-sandbox].
 #'
 #' @export
-check_secrets <- function(verbose = F) {
+check_secrets <- function(verbose = F, sandbox = is_sandbox_mode()) {
+
+  if (isTRUE(sandbox)) {
+    if (nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
+      message("csiapps sandbox: CSIAPPS_ACCESS_TOKEN found - real registration reads enabled")
+    } else {
+      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running with a simulated identity (no real data)")
+    }
+    return(invisible(TRUE))
+  }
 
   bad <- character()
   if (!grepl("^https?://", CSIAPPS_AUTH_URL()))      bad <- c(bad, "CSIAPPS_AUTH_URL")
@@ -94,8 +108,34 @@ flatten_record <- function(rec) {
   )
 }
 
-fetch_org_options <- function(token = NULL) {
-  # token arg is optional; default to env
+#' Fetch organisation options from the CSIAPPS registration API
+#'
+#' Returns all organisations accessible to the authenticated user as a list of
+#' `label`/`value` pairs, suitable for use in Shiny `selectInput()` choices.
+#'
+#' @param token Character. Authentication token. Defaults to the
+#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param sandbox Logical. When `TRUE` (the default in development), no network
+#'   call is made and an empty list is returned immediately. Set to `FALSE` for
+#'   production to fetch real organisations. Defaults to [is_sandbox_mode()].
+#'
+#' @return A list of named lists, each with `label` (organisation name) and
+#'   `value` (organisation ID).
+#'
+#' @seealso [fetch_profiles()] to fetch profiles, [set_institute()] to
+#'   configure the target institute.
+#' @export
+#' @examples
+#' \dontrun{
+#' set_institute("csiontario")
+#' orgs <- fetch_org_options(sandbox = FALSE)
+#' selectInput("org", "Organisation", choices = orgs)
+#' }
+fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
+  if (isTRUE(sandbox)) {
+    message("csiapps sandbox: fetch_org_options() skipped — returning empty list (no real API call)")
+    return(list())
+  }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
   }
@@ -140,7 +180,58 @@ fetch_org_options <- function(token = NULL) {
   rv
 }
 
-fetch_profiles <- function(token = NULL, filters = list()) {
+#' Fetch profiles from the CSIAPPS registration API
+#'
+#' Retrieves all profiles accessible to the authenticated user, with optional
+#' filtering. Automatically paginates — all matching profiles are returned in a
+#' single list regardless of how many pages the API uses.
+#'
+#' @param token Character. Authentication token. Defaults to the
+#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param filters Named list of query parameters for filtering. Common filters
+#'   include `sport_org_id` (integer, filter by organisation) and `sport`
+#'   (filter by sport). See the
+#'   [CSIAPPS Swagger docs](https://apps.csiontario.ca/api/swagger/) for all
+#'   available parameters.
+#' @param sandbox Logical. When `TRUE` (the default in development), no network
+#'   call is made and an empty list is returned immediately. Set to `FALSE` for
+#'   production to fetch real profiles. Defaults to [is_sandbox_mode()].
+#'
+#' @return A list of profile objects. Each element contains a `person` sub-list
+#'   (`first_name`, `last_name`, `dob`, `email`, ...) and a
+#'   `current_nomination` sub-list (`role`, `organization`, ...). See the
+#'   [CSIAPPS Swagger docs](https://apps.csiontario.ca/api/swagger/) for the
+#'   full schema.
+#'
+#' @seealso [fetch_profile()] to retrieve a single profile by ID,
+#'   [fetch_org_options()] to list available organisations,
+#'   [set_institute()] to configure the target institute.
+#' @export
+#' @examples
+#' \dontrun{
+#' set_institute("csiontario")
+#'
+#' # All profiles your token can see
+#' profiles <- fetch_profiles(sandbox = FALSE)
+#'
+#' # Profiles for a specific organisation
+#' profiles <- fetch_profiles(filters = list(sport_org_id = 42L), sandbox = FALSE)
+#'
+#' # Build a display data frame
+#' profile_df <- do.call(rbind, lapply(profiles, function(p) {
+#'   data.frame(
+#'     id         = p$id,
+#'     first_name = p$person$first_name %||% NA_character_,
+#'     last_name  = p$person$last_name  %||% NA_character_,
+#'     email      = p$person$email      %||% NA_character_
+#'   )
+#' }))
+#' }
+fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_mode()) {
+  if (isTRUE(sandbox)) {
+    message("csiapps sandbox: fetch_profiles() skipped — returning empty list (no real API call)")
+    return(list())
+  }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
   }
@@ -182,7 +273,34 @@ fetch_profiles <- function(token = NULL, filters = list()) {
   all
 }
 
-fetch_profile <- function(token = NULL, profile_id) {
+#' Fetch a single profile from the CSIAPPS registration API
+#'
+#' Retrieves one profile by its ID.
+#'
+#' @param token Character. Authentication token. Defaults to the
+#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param profile_id Integer or character. The ID of the profile to retrieve.
+#' @param sandbox Logical. When `TRUE` (the default in development), no network
+#'   call is made and `NULL` is returned immediately. Set to `FALSE` for
+#'   production to fetch the real profile. Defaults to [is_sandbox_mode()].
+#'
+#' @return A single profile object as a list, or `NULL` in sandbox mode. The
+#'   structure mirrors the list elements returned by [fetch_profiles()].
+#'
+#' @seealso [fetch_profiles()] to retrieve multiple profiles,
+#'   [set_institute()] to configure the target institute.
+#' @export
+#' @examples
+#' \dontrun{
+#' set_institute("csiontario")
+#' profile <- fetch_profile(profile_id = 123L, sandbox = FALSE)
+#' profile$person$first_name
+#' }
+fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode()) {
+  if (isTRUE(sandbox)) {
+    message("csiapps sandbox: fetch_profile() skipped — returning NULL (no real API call)")
+    return(NULL)
+  }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
   }

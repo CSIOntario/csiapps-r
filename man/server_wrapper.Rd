@@ -4,10 +4,18 @@
 \alias{server_wrapper}
 \title{Wrapper server function for Shiny apps}
 \usage{
-server_wrapper(app_specific_logic)
+server_wrapper(app_specific_logic, sandbox = is_sandbox_mode())
 }
 \arguments{
 \item{app_specific_logic}{Existing server logic of shiny web application}
+
+\item{sandbox}{If TRUE, the real OAuth2 redirect is skipped and the session is
+seeded from the developer's existing \code{CSIAPPS_ACCESS_TOKEN}, so a wrapped app
+can be run locally without client credentials. If no token is set, the app
+shell renders with an unauthenticated notice. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}},
+which is \strong{TRUE by default}. Disable it for deployment with
+\code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production}) to use the
+real login flow. See \link{csiapps-sandbox} for details and limitations.}
 }
 \value{
 A Shiny server function that wraps the provided app-specific logic with authentication handling and user info retrieval.

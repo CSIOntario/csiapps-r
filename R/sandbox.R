@@ -32,7 +32,28 @@
 #' Any other endpoint raises an error. Sandbox state lasts for the R session;
 #' use [clear_sandbox()] to reset it between tests.
 #'
+#' @section Shiny app wrappers:
+#' Sandbox mode also lets a wrapped Shiny app (see [ui_wrapper()],
+#' [server_wrapper()], [check_secrets()]) run locally without the OAuth2
+#' redirect. The redirect exists only to obtain an access token, and requires
+#' client credentials that cannot be safely distributed, so in sandbox mode
+#' [server_wrapper()] **simulates the login** instead: it seeds the session from
+#' the developer's existing `CSIAPPS_ACCESS_TOKEN` and hands it to the same code
+#' path a production login would. If that token is present, `/me` and the
+#' organization list are loaded from the **real** registration API, so the
+#' developer sees their real identity and organizations. If no token is set, the
+#' app shell still renders but shows an unauthenticated notice prompting the
+#' developer to set a read-only `CSIAPPS_ACCESS_TOKEN`. The same wrapped-app code
+#' therefore runs in both modes; only the `csiapps.sandbox` option differs.
+#'
 #' @section Limitations:
+#' * **Sandbox is not fully offline for wrapped apps.** Warehouse endpoints
+#'   routed through [make_request()] are emulated locally, but the wrapper's
+#'   registration reads (`/me`, organizations, profiles) bypass [make_request()]
+#'   and call the real API with your token. Sandbox mode is thus deliberately
+#'   split: warehouse data is emulated, registration/auth data is real. Set the
+#'   institute with [set_institute()] to match the institute that issued your
+#'   token, or those reads will be rejected.
 #' The sandbox faithfully simulates the *schema contract*, not the warehouse.
 #' Anything that depends on server-side state will differ from production:
 #'
@@ -241,6 +262,39 @@ browse_sandbox <- function(source_uuid = NULL) {
            "POST api/warehouse/ingestion/primary/, ",
            "GET api/warehouse/data-records."),
     ep, method))
+}
+
+# ---- Sandbox session seeding for server_wrapper() ----------------------
+
+# Simulate the OAuth redirect for a wrapped Shiny app in sandbox mode.
+#
+# The real redirect exists only to obtain an access token, so instead of
+# contacting the identity provider (which would require client credentials
+# we cannot safely distribute) we reuse the CSIAPPS_ACCESS_TOKEN the
+# developer already has. The seeded token is handed to the *same*
+# observeEvent(user_token()) consumer server_wrapper() uses in production,
+# so `/me` and the organization list are loaded from the real registration
+# API exactly as they would be after a production login.
+#
+# When no token is present the app still runs, but with a simulated identity
+# (see the `csiapps.sandbox_user` option) and no real data -- enough to
+# exercise the UI shell offline.
+#
+# @param user_token,userinfo the reactiveVals created in server_wrapper()
+# @keywords internal
+.sandbox_seed_session <- function(user_token, userinfo) {
+  tok <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+  if (nzchar(tok)) {
+    message("csiapps sandbox: simulating login with your existing CSIAPPS_ACCESS_TOKEN")
+    # `sandbox = TRUE` marks the origin; the shared consumer only reads $access_token
+    user_token(list(access_token = tok, sandbox = TRUE))
+  } else {
+    message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set; running unauthenticated")
+    # Non-null sentinel with no $access_token: shared consumer short-circuits before
+    # any network call; auth_status shows an unauthenticated notice
+    user_token(list(sandbox = TRUE, unauthenticated = TRUE))
+  }
+  invisible(NULL)
 }
 
 # Validate and store records for POST api/warehouse/ingestion/primary/

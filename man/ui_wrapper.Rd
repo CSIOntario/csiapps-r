@@ -4,10 +4,14 @@
 \alias{ui_wrapper}
 \title{Wrapper UI for Shiny apps}
 \usage{
-ui_wrapper(...)
+ui_wrapper(..., sandbox = is_sandbox_mode())
 }
 \arguments{
 \item{...}{Additional UI elements to include in the main content area}
+
+\item{sandbox}{If TRUE, a "sandbox mode" banner is shown so it is obvious the
+app is not connected to the live warehouse. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.
+See \link{csiapps-sandbox}.}
 }
 \value{
 A Shiny UI object with a navbar, footer, and main content area

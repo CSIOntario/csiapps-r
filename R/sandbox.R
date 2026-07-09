@@ -214,24 +214,6 @@ browse_sandbox <- function(source_uuid = NULL) {
 
 # ---- Dummy registration registry (sport orgs + athletes) ---------------
 
-# ponytail: fixed vocab + random draw; identity details don't matter in sandbox.
-.SANDBOX_FIRST <- c("Alex", "Sam", "Jordan", "Riley", "Casey", "Morgan",
-                    "Taylor", "Jamie", "Avery", "Quinn", "Reese", "Skyler")
-.SANDBOX_LAST  <- c("Chen", "Singh", "Tremblay", "Okafor", "Nguyen", "Kowalski",
-                    "Reyes", "Dubois", "Patel", "Larsen", "Ferreira", "Yamamoto")
-# Sport org name -> its sport, so a generated org and its athletes stay coherent
-# (an org named "Rowing Canada" has rowers, not random sports).
-.SANDBOX_ORG_SPORT <- c(
-  "Rowing Canada"        = "Rowing",
-  "Athletics Canada"     = "Athletics",
-  "Swimming Canada"      = "Swimming",
-  "Cycling Canada"       = "Cycling",
-  "Speed Skating Canada" = "Speed Skating",
-  "Wrestling Canada"     = "Wrestling",
-  "Canoe Kayak Canada"   = "Canoe/Kayak",
-  "Diving Canada"        = "Diving"
-)
-
 .sandbox_org_ids <- function() {
   vapply(.sandbox_env$orgs, function(o) as.integer(o$id), integer(1))
 }
@@ -256,15 +238,27 @@ browse_sandbox <- function(source_uuid = NULL) {
   )
 }
 
-# Build one prod-shaped athlete profile. Only identity and the sport-org link
-# (sport$id) are randomized; the remaining fields are schema-shaped placeholders
-# so the object matches the /api/registration/profile/ athlete payload.
-.sandbox_make_profile <- function(id, sport_org_id) {
-  first <- sample(.SANDBOX_FIRST, 1)
-  last  <- sample(.SANDBOX_LAST, 1)
-  # Athlete's sport is the org's sport, so profile and org are coherent.
-  org_sport <- .sandbox_env$orgs[[as.character(sport_org_id)]]$sport %||%
-    sample(unname(.SANDBOX_ORG_SPORT), 1)
+# n unique first/last name pairs, drawn without replacement from babynames so
+# every athlete name is distinct. babynames ships first names only, so we draw
+# 2n distinct names from that pool and split them into firsts and lasts.
+.sandbox_random_names <- function(n) {
+  if (n == 0) return(list(first = character(0), last = character(0)))
+  pool <- unique(babynames::babynames$name)
+  if (length(pool) < 2 * n) {
+    stop(sprintf("create_profile: cannot draw %d unique names; babynames has only %d.",
+                 2 * n, length(pool)), call. = FALSE)
+  }
+  draw <- sample(pool, 2 * n)  # without replacement -> all distinct
+  list(first = draw[seq_len(n)], last = draw[n + seq_len(n)])
+}
+
+# Build one prod-shaped athlete profile. Identity (first/last) is supplied by
+# the caller and the sport-org link (sport$id) plus sport$name come from the
+# org; the remaining fields are schema-shaped placeholders so the object matches
+# the /api/registration/profile/ athlete payload.
+.sandbox_make_profile <- function(id, sport_org_id, first, last) {
+  # Athlete's sport name is the org's name, so profile and org stay coherent.
+  org_name <- .sandbox_env$orgs[[as.character(sport_org_id)]]$name
   list(
     role_slug = "athlete",
     id        = id,
@@ -280,7 +274,7 @@ browse_sandbox <- function(source_uuid = NULL) {
       competent_minor       = TRUE,
       social_media_accounts = list()
     ),
-    sport              = list(id = as.integer(sport_org_id), name = org_sport),
+    sport              = list(id = as.integer(sport_org_id), name = org_name),
     current_enrollment = "",
     current_nomination = "",
     residence_city     = NULL,
@@ -314,21 +308,27 @@ browse_sandbox <- function(source_uuid = NULL) {
 #'
 #' Registers a sport org so that sandbox reads (`fetch_org_options()`, and
 #' `fetch_profiles(filters = list(sport_org_id = ...))`) behave like production.
+#' The org's `name` becomes the `sport$name` of every athlete created under it
+#' with [create_profile()].
 #'
+#' @param name Character. Name of the sport organization (e.g. "Rowing Canada").
+#'   Required.
 #' @param id Integer. Optional org id. If `NULL` (default) an unused 3-digit id
-#'   is generated. If supplied, it must not collide with an existing sandbox org.
+#'   is generated. If supplied, it must be a positive integer that does not
+#'   collide with an existing sandbox org.
 #'
 #' @return The created org (`list(id, name, annual_cycle_start)`), invisibly.
 #' @seealso [create_profile()] to add athletes, [csiapps-sandbox] for an overview
 #' @export
 #' @examples
-#' org <- create_sport_org()
+#' org <- create_sport_org("Rowing Canada")
 #' create_profile(5, org$id)
 #' clear_sandbox()
-create_sport_org <- function(id = NULL) {
+create_sport_org <- function(name, id = NULL) {
   if (!is_sandbox_mode()) {
     warning("create_sport_org: not in sandbox mode; dummy orgs are only read by sandbox helpers and have no effect in production.", call. = FALSE)
   }
+  stopifnot(is.character(name), length(name) == 1, nzchar(name))
   existing <- .sandbox_org_ids()
   if (is.null(id)) {
     pool <- setdiff(100:999, existing)
@@ -342,11 +342,9 @@ create_sport_org <- function(id = NULL) {
     }
   }
 
-  pick <- sample(seq_along(.SANDBOX_ORG_SPORT), 1)
   org <- list(
     id                 = id,
-    name               = names(.SANDBOX_ORG_SPORT)[pick],
-    sport              = unname(.SANDBOX_ORG_SPORT[pick]),
+    name               = name,
     annual_cycle_start = as.character(Sys.Date())
   )
   .sandbox_env$orgs[[as.character(id)]] <- org
@@ -362,17 +360,23 @@ create_sport_org <- function(id = NULL) {
 #'
 #' @param n Integer. Number of profiles to create.
 #' @param sport_org_id Integer. Id of the sport org (from [create_sport_org()])
-#'   the athletes belong to. Stored as each profile's `sport$id`, which is what
-#'   `fetch_profiles(filters = list(sport_org_id = ...))` filters on.
+#'   the athletes belong to. Stored as each profile's `sport$id` (the filter
+#'   `fetch_profiles(filters = list(sport_org_id = ...))` uses), and its name
+#'   becomes each profile's `sport$name`. The org must already exist.
+#' @param first_names,last_names Character vectors of length `n` giving each
+#'   athlete's first and last name. Provide both or neither. When both are `NULL`
+#'   (default), `n` unique first/last pairs are drawn without replacement from
+#'   the `babynames` dataset, so every athlete name is distinct.
 #'
 #' @return The created profiles, invisibly. Appended to any already registered.
 #' @seealso [create_sport_org()], [csiapps-sandbox]
 #' @export
 #' @examples
-#' org <- create_sport_org()
-#' create_profile(3, org$id)
+#' org <- create_sport_org("Rowing Canada")
+#' create_profile(2, org$id, first_names = c("Ada", "Blair"),
+#'                last_names = c("Nkemelu", "Okafor"))
 #' clear_sandbox()
-create_profile <- function(n, sport_org_id) {
+create_profile <- function(n, sport_org_id, first_names = NULL, last_names = NULL) {
   if (!is_sandbox_mode()) {
     warning("create_profile: not in sandbox mode; dummy profiles are only read by sandbox helpers and have no effect in production.", call. = FALSE)
   }
@@ -384,8 +388,21 @@ create_profile <- function(n, sport_org_id) {
       sport_org_id, sport_org_id), call. = FALSE)
   }
 
+  # Names: caller supplies both vectors, or neither and we generate unique ones.
+  if (is.null(first_names) && is.null(last_names)) {
+    pairs       <- .sandbox_random_names(n)
+    first_names <- pairs$first
+    last_names  <- pairs$last
+  } else if (is.null(first_names) || is.null(last_names)) {
+    stop("create_profile: provide both `first_names` and `last_names`, or neither.", call. = FALSE)
+  } else {
+    stopifnot(is.character(first_names), is.character(last_names),
+              length(first_names) == n, length(last_names) == n)
+  }
+
   start <- length(.sandbox_env$profiles)
-  new   <- lapply(seq_len(n), function(i) .sandbox_make_profile(start + i, sport_org_id))
+  new   <- lapply(seq_len(n), function(i)
+    .sandbox_make_profile(start + i, sport_org_id, first_names[i], last_names[i]))
   .sandbox_env$profiles <- c(.sandbox_env$profiles, new)
   message(sprintf("csiapps sandbox: created %d athlete(s) under sport org %d (%d total)",
                   n, sport_org_id, length(.sandbox_env$profiles)))
@@ -477,9 +494,10 @@ create_profile <- function(n, sport_org_id) {
 # contacting the identity provider (which would require client credentials
 # we cannot safely distribute) we reuse the CSIAPPS_ACCESS_TOKEN the
 # developer already has. The seeded token is handed to the *same*
-# observeEvent(user_token()) consumer server_wrapper() uses in production,
-# so `/me` and the organization list are loaded from the real registration
-# API exactly as they would be after a production login.
+# observeEvent(user_token()) consumer server_wrapper() uses in production, so
+# `/me` is loaded from the real registration API exactly as after a production
+# login. It is used *only* to emulate the login: all data (orgs, athletes,
+# warehouse) is served from the local sandbox, never the real API.
 #
 # When no token is present the app still renders, but shows an unauthenticated
 # notice: a token is required to emulate the login and populate `/me`.

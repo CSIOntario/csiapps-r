@@ -159,7 +159,8 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
     # Load /me and update global access token when we get a token.
     # Shared by the production and sandbox paths: in sandbox the token is the
-    # developer's own, so `/me` and org loading hit the real registration API.
+    # developer's own and is used only to load the real `/me` identity; all
+    # other data (orgs, athletes, warehouse) is served from the local sandbox.
     observeEvent(user_token(), {
       tok <- user_token()
 
@@ -215,7 +216,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       }
 
       if (isTRUE(tok$unauthenticated)) {
-        return(tags$p("Not authenticated — set CSIAPPS_ACCESS_TOKEN to use sandbox mode with real data."))
+        return(tags$p("Not authenticated — set CSIAPPS_ACCESS_TOKEN to emulate login in sandbox mode."))
       }
 
       ui_me <- userinfo()

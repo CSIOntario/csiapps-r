@@ -4,11 +4,15 @@
 \alias{create_sport_org}
 \title{Create a dummy sport organization in the sandbox}
 \usage{
-create_sport_org(id = NULL)
+create_sport_org(name, id = NULL)
 }
 \arguments{
+\item{name}{Character. Name of the sport organization (e.g. "Rowing Canada").
+Required.}
+
 \item{id}{Integer. Optional org id. If \code{NULL} (default) an unused 3-digit id
-is generated. If supplied, it must not collide with an existing sandbox org.}
+is generated. If supplied, it must be a positive integer that does not
+collide with an existing sandbox org.}
 }
 \value{
 The created org (\code{list(id, name, annual_cycle_start)}), invisibly.
@@ -16,9 +20,11 @@ The created org (\code{list(id, name, annual_cycle_start)}), invisibly.
 \description{
 Registers a sport org so that sandbox reads (\code{fetch_org_options()}, and
 \code{fetch_profiles(filters = list(sport_org_id = ...))}) behave like production.
+The org's \code{name} becomes the \code{sport$name} of every athlete created under it
+with \code{\link[=create_profile]{create_profile()}}.
 }
 \examples{
-org <- create_sport_org()
+org <- create_sport_org("Rowing Canada")
 create_profile(5, org$id)
 clear_sandbox()
 }

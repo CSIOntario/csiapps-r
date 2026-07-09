@@ -39,21 +39,27 @@
 #' client credentials that cannot be safely distributed, so in sandbox mode
 #' [server_wrapper()] **simulates the login** instead: it seeds the session from
 #' the developer's existing `CSIAPPS_ACCESS_TOKEN` and hands it to the same code
-#' path a production login would. If that token is present, `/me` and the
-#' organization list are loaded from the **real** registration API, so the
-#' developer sees their real identity and organizations. If no token is set, the
-#' app shell still renders but shows an unauthenticated notice prompting the
-#' developer to set a read-only `CSIAPPS_ACCESS_TOKEN`. The same wrapped-app code
-#' therefore runs in both modes; only the `csiapps.sandbox` option differs.
+#' path a production login would. The token is used **only to emulate the
+#' login**: if it is present, `/me` is loaded from the real API so the header
+#' shows the developer's real identity. All *data* -- sport organizations,
+#' athletes/profiles, and warehouse records -- is served from the local sandbox
+#' (the dummy registry and the emulated warehouse), never the live API. If no
+#' token is set, the app shell still renders but shows an unauthenticated notice
+#' prompting the developer to set a read-only `CSIAPPS_ACCESS_TOKEN`. The same
+#' wrapped-app code runs in both modes; only the `csiapps.sandbox` option differs.
 #'
 #' @section Limitations:
-#' * **Sandbox is not fully offline for wrapped apps.** Warehouse endpoints
-#'   routed through [make_request()] are emulated locally, but the wrapper's
-#'   registration reads (`/me`, organizations, profiles) bypass [make_request()]
-#'   and call the real API with your token. Sandbox mode is thus deliberately
-#'   split: warehouse data is emulated, registration/auth data is real. Set the
-#'   institute with [set_institute()] to match the institute that issued your
-#'   token, or those reads will be rejected.
+#' * **The access token is used only to emulate login.** A wrapped app's `/me`
+#'   identity is fetched from the real API with your token, so set the institute
+#'   with [set_institute()] to match the institute that issued it or `/me` is
+#'   rejected. Everything else is dummy: sport organizations and athletes come
+#'   from the local registry ([create_sport_org()], [create_profile()]) and
+#'   warehouse reads/writes are emulated in memory. No real client data is read.
+#' * **Only warehouse endpoints are routed through [make_request()].** Calling
+#'   `make_request("api/registration/...")` in sandbox raises a 501; use the
+#'   [fetch_org_options()] / [fetch_profiles()] helpers, which read the dummy
+#'   registry instead. In sandbox, [fetch_profiles()] honours only the
+#'   `sport_org_id` filter; other filters are ignored.
 #' The sandbox faithfully simulates the *schema contract*, not the warehouse.
 #' Anything that depends on server-side state will differ from production:
 #'
@@ -67,22 +73,25 @@
 #'   cases (e.g. `format` keyword enforcement). Passing sandbox validation is
 #'   therefore a *necessary but not sufficient* condition for production
 #'   acceptance -- do not treat a green sandbox run as a guarantee.
-#' * **`subject` is always `NULL` in retrieved records.** In production the
-#'   server links each ingested record to a registered profile and returns it
-#'   (name, sport, ...) in the record envelope. The sandbox has no profile
-#'   registry, so it cannot emulate this linkage and returns `subject = NULL`
-#'   rather than fabricating misleading data. Code that displays or filters on
-#'   subject fields will see placeholder values, and mistyped `subject_field`
-#'   values that production would flag are accepted silently.
+#' * **`subject` linkage is emulated only for registered athletes.** On
+#'   ingestion the sandbox resolves each record's `subject_field` value against
+#'   athletes registered with [create_profile()] and returns the matched athlete
+#'   (id, name, sport) in the record envelope, mirroring production. If no
+#'   athlete matches -- because none was registered or the `subject_field` value
+#'   is mistyped -- `subject` is `NULL` rather than fabricated. Production would
+#'   reject an unresolved subject; the sandbox accepts it silently, so a green
+#'   sandbox ingest does not guarantee the server will link every record.
 #'
 #' @name csiapps-sandbox
 NULL
 
 # Hidden environment holding sandbox state for the session
 .sandbox_env <- new.env(parent = emptyenv())
-.sandbox_env$schemas <- list()
-.sandbox_env$records <- list()
-.sandbox_env$dir     <- NULL
+.sandbox_env$schemas  <- list()
+.sandbox_env$records  <- list()
+.sandbox_env$orgs     <- list()  # dummy sport orgs, keyed by id (as character)
+.sandbox_env$profiles <- list()  # dummy athlete profiles, in insertion order
+.sandbox_env$dir      <- NULL
 
 # Lazily create the on-disk sandbox directory (tempdir-based, per session)
 sandbox_dir <- function() {
@@ -157,8 +166,10 @@ register_sandbox_schema <- function(source_uuid, schema) {
 #' clear_sandbox()
 clear_sandbox <- function(source_uuid = NULL) {
   if (is.null(source_uuid)) {
-    .sandbox_env$schemas <- list()
-    .sandbox_env$records <- list()
+    .sandbox_env$schemas  <- list()
+    .sandbox_env$records  <- list()
+    .sandbox_env$orgs     <- list()
+    .sandbox_env$profiles <- list()
 
     if (!is.null(.sandbox_env$dir) && dir.exists(.sandbox_env$dir)) {
       unlink(list.dirs(.sandbox_env$dir, full.names = TRUE, recursive = FALSE), recursive = TRUE)
@@ -199,6 +210,186 @@ browse_sandbox <- function(source_uuid = NULL) {
   }
   utils::browseURL(target_dir)
   invisible(target_dir)
+}
+
+# ---- Dummy registration registry (sport orgs + athletes) ---------------
+
+# ponytail: fixed vocab + random draw; identity details don't matter in sandbox.
+.SANDBOX_FIRST <- c("Alex", "Sam", "Jordan", "Riley", "Casey", "Morgan",
+                    "Taylor", "Jamie", "Avery", "Quinn", "Reese", "Skyler")
+.SANDBOX_LAST  <- c("Chen", "Singh", "Tremblay", "Okafor", "Nguyen", "Kowalski",
+                    "Reyes", "Dubois", "Patel", "Larsen", "Ferreira", "Yamamoto")
+# Sport org name -> its sport, so a generated org and its athletes stay coherent
+# (an org named "Rowing Canada" has rowers, not random sports).
+.SANDBOX_ORG_SPORT <- c(
+  "Rowing Canada"        = "Rowing",
+  "Athletics Canada"     = "Athletics",
+  "Swimming Canada"      = "Swimming",
+  "Cycling Canada"       = "Cycling",
+  "Speed Skating Canada" = "Speed Skating",
+  "Wrestling Canada"     = "Wrestling",
+  "Canoe Kayak Canada"   = "Canoe/Kayak",
+  "Diving Canada"        = "Diving"
+)
+
+.sandbox_org_ids <- function() {
+  vapply(.sandbox_env$orgs, function(o) as.integer(o$id), integer(1))
+}
+
+# Resolve an ingested record's subject against the athlete registry, mirroring
+# the production link: body$subject_field names the field in the record whose
+# value must match a registered athlete's id. Returns NULL (an unlinked record,
+# exactly as before) when there's no subject_field, no value, or no such athlete.
+.sandbox_resolve_subject <- function(record, subject_field) {
+  if (is.null(subject_field)) return(NULL)
+  key <- record[[subject_field]]
+  if (is.null(key)) return(NULL)
+  hit <- Filter(function(p) identical(as.character(p$id), as.character(key)), .sandbox_env$profiles)
+  if (!length(hit)) return(NULL)
+  p <- hit[[1]]
+  # Shape mirrors what flatten_record() reads off a record subject.
+  list(
+    id         = p$id,
+    first_name = p$person$first_name,
+    last_name  = p$person$last_name,
+    sport      = p$sport
+  )
+}
+
+# Build one prod-shaped athlete profile. Only identity and the sport-org link
+# (sport$id) are randomized; the remaining fields are schema-shaped placeholders
+# so the object matches the /api/registration/profile/ athlete payload.
+.sandbox_make_profile <- function(id, sport_org_id) {
+  first <- sample(.SANDBOX_FIRST, 1)
+  last  <- sample(.SANDBOX_LAST, 1)
+  # Athlete's sport is the org's sport, so profile and org are coherent.
+  org_sport <- .sandbox_env$orgs[[as.character(sport_org_id)]]$sport %||%
+    sample(unname(.SANDBOX_ORG_SPORT), 1)
+  list(
+    role_slug = "athlete",
+    id        = id,
+    person = list(
+      id                    = id,
+      first_name            = first,
+      last_name             = last,
+      email                 = sprintf("%s.%s@example.com", tolower(first), tolower(last)),
+      dob                   = as.character(Sys.Date() - sample(6570:12775, 1)),
+      majority_age          = "",
+      guardian              = NULL,
+      emergency_contact     = NULL,
+      competent_minor       = TRUE,
+      social_media_accounts = list()
+    ),
+    sport              = list(id = as.integer(sport_org_id), name = org_sport),
+    current_enrollment = "",
+    current_nomination = "",
+    residence_city     = NULL,
+    birth_city         = NULL,
+    status             = "ACTIVE",
+    confirmed_date     = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    discipline         = "",
+    para_role          = "ATHLETE",
+    sex_of_competition = sample(c("M", "F"), 1),
+    gender             = sample(c("M", "F"), 1),
+    ethnicity          = "",
+    ethnicity_other    = "",
+    pronouns           = sample(c("HE", "SHE", "THEY"), 1),
+    pronouns_other     = "",
+    disability         = "NO",
+    birth_country      = "CAN",
+    residence_country  = "CAN",
+    education_attending   = TRUE,
+    education_level       = "ATTENDING_SECONDARY",
+    education_institution = "",
+    education_css         = "NO",
+    created_by         = 0,
+    updated_by         = 0,
+    updated_by_profile = 0,
+    role               = 0,
+    carding_level      = 0
+  )
+}
+
+#' Create a dummy sport organization in the sandbox
+#'
+#' Registers a sport org so that sandbox reads (`fetch_org_options()`, and
+#' `fetch_profiles(filters = list(sport_org_id = ...))`) behave like production.
+#'
+#' @param id Integer. Optional org id. If `NULL` (default) an unused 3-digit id
+#'   is generated. If supplied, it must not collide with an existing sandbox org.
+#'
+#' @return The created org (`list(id, name, annual_cycle_start)`), invisibly.
+#' @seealso [create_profile()] to add athletes, [csiapps-sandbox] for an overview
+#' @export
+#' @examples
+#' org <- create_sport_org()
+#' create_profile(5, org$id)
+#' clear_sandbox()
+create_sport_org <- function(id = NULL) {
+  if (!is_sandbox_mode()) {
+    warning("create_sport_org: not in sandbox mode; dummy orgs are only read by sandbox helpers and have no effect in production.", call. = FALSE)
+  }
+  existing <- .sandbox_org_ids()
+  if (is.null(id)) {
+    pool <- setdiff(100:999, existing)
+    if (length(pool) == 0) stop("create_sport_org: too many sport orgs in the sandbox. Limit is 900.", call. = FALSE)
+    id <- pool[sample.int(length(pool), 1)] #sample(pool, 1) - this behaves undesirably when pool is length 1
+  } else {
+    stopifnot(is.numeric(id), length(id) == 1, is.finite(id), id == as.integer(id), id > 0)
+    id <- as.integer(id)
+    if (id %in% existing) {
+      stop(sprintf("create_sport_org: sport org id %d already exists in the sandbox.", id), call. = FALSE)
+    }
+  }
+
+  pick <- sample(seq_along(.SANDBOX_ORG_SPORT), 1)
+  org <- list(
+    id                 = id,
+    name               = names(.SANDBOX_ORG_SPORT)[pick],
+    sport              = unname(.SANDBOX_ORG_SPORT[pick]),
+    annual_cycle_start = as.character(Sys.Date())
+  )
+  .sandbox_env$orgs[[as.character(id)]] <- org
+  message(sprintf("csiapps sandbox: created sport org %d ('%s')", id, org$name))
+  invisible(org)
+}
+
+#' Create dummy athlete profiles in the sandbox
+#'
+#' Generates `n` random athlete profiles and registers them under an existing
+#' sandbox sport org, so sandbox `fetch_profiles()` / `fetch_profile()` return
+#' prod-shaped data. The org must already exist (see [create_sport_org()]).
+#'
+#' @param n Integer. Number of profiles to create.
+#' @param sport_org_id Integer. Id of the sport org (from [create_sport_org()])
+#'   the athletes belong to. Stored as each profile's `sport$id`, which is what
+#'   `fetch_profiles(filters = list(sport_org_id = ...))` filters on.
+#'
+#' @return The created profiles, invisibly. Appended to any already registered.
+#' @seealso [create_sport_org()], [csiapps-sandbox]
+#' @export
+#' @examples
+#' org <- create_sport_org()
+#' create_profile(3, org$id)
+#' clear_sandbox()
+create_profile <- function(n, sport_org_id) {
+  if (!is_sandbox_mode()) {
+    warning("create_profile: not in sandbox mode; dummy profiles are only read by sandbox helpers and have no effect in production.", call. = FALSE)
+  }
+  stopifnot(is.numeric(n), length(n) == 1, n >= 0)
+  sport_org_id <- as.integer(sport_org_id)
+  if (!(as.character(sport_org_id) %in% names(.sandbox_env$orgs))) {
+    stop(sprintf(
+      "create_profile: sport org '%s' does not exist; create it first with create_sport_org(%s).",
+      sport_org_id, sport_org_id), call. = FALSE)
+  }
+
+  start <- length(.sandbox_env$profiles)
+  new   <- lapply(seq_len(n), function(i) .sandbox_make_profile(start + i, sport_org_id))
+  .sandbox_env$profiles <- c(.sandbox_env$profiles, new)
+  message(sprintf("csiapps sandbox: created %d athlete(s) under sport org %d (%d total)",
+                  n, sport_org_id, length(.sandbox_env$profiles)))
+  invisible(new)
 }
 
 # ---- Internal request router -------------------------------------------
@@ -245,11 +436,25 @@ browse_sandbox <- function(source_uuid = NULL) {
     }
 
     records <- .sandbox_env$records[[source_uuid]] %||% list()
+    # Resolve each record's subject at *read* time (not ingest) so athletes
+    # registered with create_profile() after ingestion backfill correctly. The
+    # envelope is rebuilt explicitly (dropping the internal subject_field and
+    # keeping `subject` as NULL when unresolved) to match the real API shape.
+    results <- lapply(records, function(rec) {
+      list(
+        id           = rec$id,
+        dataset_uuid = rec$dataset_uuid,
+        data         = rec$data,
+        subject      = .sandbox_resolve_subject(rec$data, rec$subject_field),
+        created_at   = rec$created_at,
+        updated_at   = rec$updated_at
+      )
+    })
     page <- list(
-      count    = length(records),
+      count    = length(results),
       `next`   = NULL,
       previous = NULL,
-      results  = records
+      results  = results
     )
     # The real make_request(paginate = TRUE) returns a list of parsed pages
     if (paginate) return(list(page))
@@ -276,13 +481,12 @@ browse_sandbox <- function(source_uuid = NULL) {
 # so `/me` and the organization list are loaded from the real registration
 # API exactly as they would be after a production login.
 #
-# When no token is present the app still runs, but with a simulated identity
-# (see the `csiapps.sandbox_user` option) and no real data -- enough to
-# exercise the UI shell offline.
+# When no token is present the app still renders, but shows an unauthenticated
+# notice: a token is required to emulate the login and populate `/me`.
 #
-# @param user_token,userinfo the reactiveVals created in server_wrapper()
+# @param user_token the reactiveVal created in server_wrapper()
 # @keywords internal
-.sandbox_seed_session <- function(user_token, userinfo) {
+.sandbox_seed_session <- function(user_token) {
   tok <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
   if (nzchar(tok)) {
     message("csiapps sandbox: simulating login with your existing CSIAPPS_ACCESS_TOKEN")
@@ -299,8 +503,9 @@ browse_sandbox <- function(source_uuid = NULL) {
 
 # Validate and store records for POST api/warehouse/ingestion/primary/
 sandbox_ingest <- function(body, verbose = FALSE) {
-  source_uuid <- body$source
-  records     <- body$records
+  source_uuid   <- body$source
+  records       <- body$records
+  subject_field <- body$subject_field
 
   if (is.null(source_uuid) || is.null(records)) {
     sandbox_error(400, "'source' and 'records' must be provided in the body.")
@@ -345,17 +550,18 @@ sandbox_ingest <- function(body, verbose = FALSE) {
   dataset_uuid <- paste(sprintf("%02x", as.integer(openssl::rand_bytes(16))), collapse = "")
   n_existing   <- length(.sandbox_env$records[[source_uuid]])
 
-  # Wrap each record in the envelope shape returned by the real
-  # data-records endpoint (see flatten_record()); subject linkage cannot
-  # be emulated locally, so subject is always NULL
+  # Wrap each record in the envelope shape returned by the real data-records
+  # endpoint (see flatten_record()). We store subject_field (not a resolved
+  # subject) so the athlete link is resolved at read time -- this lets athletes
+  # registered after ingestion backfill instead of being frozen as NULL.
   wrapped <- lapply(seq_along(records), function(i) {
     list(
-      id           = n_existing + i,
-      dataset_uuid = dataset_uuid,
-      data         = records[[i]],
-      subject      = NULL,
-      created_at   = now,
-      updated_at   = now
+      id            = n_existing + i,
+      dataset_uuid  = dataset_uuid,
+      data          = records[[i]],
+      subject_field = subject_field,
+      created_at    = now,
+      updated_at    = now
     )
   })
   .sandbox_env$records[[source_uuid]] <- c(.sandbox_env$records[[source_uuid]], wrapped)

@@ -17,6 +17,9 @@ reference:
     Functions for interfacing with the CSIAPPS REST API.
   contents:
   - make_request
+  - fetch_org_options
+  - fetch_profiles
+  - fetch_profile
 - subtitle: Sandbox
   desc: |
     Functions for simulating warehouse workflows in a local sandbox.
@@ -24,6 +27,8 @@ reference:
   - csiapps-sandbox
   - is_sandbox_mode
   - register_sandbox_schema
+  - create_sport_org
+  - create_profile
   - clear_sandbox
   - browse_sandbox
 

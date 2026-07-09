@@ -57,11 +57,13 @@ result <- make_request(
 
 ### Registration API
 
-The registration API provides access to profiles and organisations. Unlike the
-warehouse endpoints, these functions always contact the **real** registration
-API when `sandbox = FALSE` — they are not emulated locally. In sandbox mode
-(the default) they return empty results immediately with no network call, so
-dashboards can be built and tested without a live connection.
+The registration API provides access to profiles and organisations. In sandbox
+mode (the default) these functions read from a **local dummy registry** instead
+of the network: seed it with `create_sport_org()` and `create_profile()`, and
+`fetch_org_options()` / `fetch_profiles()` / `fetch_profile()` return that dummy
+data in the same shape the real API uses, so dashboards can be built and tested
+without a live connection. Pass `sandbox = FALSE` to contact the **real**
+registration API instead.
 
 #### Organisations
 
@@ -113,16 +115,23 @@ profile$person$first_name
 
 #### Sandbox behaviour
 
-In sandbox mode all three functions return immediately without a network call:
+In sandbox mode the three functions read whatever you have registered locally
+with `create_sport_org()` and `create_profile()`:
 
 ```{r}
-fetch_org_options()  # returns list()  — sandbox = TRUE by default
-fetch_profiles()     # returns list()  — sandbox = TRUE by default
-fetch_profile(123L)  # returns NULL    — sandbox = TRUE by default
+create_sport_org("Rowing Canada", id = 42L)
+create_profile(3, sport_org_id = 42L)  # 3 unique athletes, names from babynames
+
+fetch_org_options()                                 # the dummy orgs
+fetch_profiles(filters = list(sport_org_id = 42L))  # the dummy athletes
+fetch_profile(1L)                                   # one dummy athlete, or NULL
 ```
 
-To fetch real data during development without turning sandbox off globally,
-pass `sandbox = FALSE` to an individual call:
+Only the `sport_org_id` filter is honoured in sandbox; other filters are
+ignored. With nothing registered, `fetch_org_options()` / `fetch_profiles()`
+return `list()` and `fetch_profile()` returns `NULL`. To fetch real data during
+development without turning sandbox off globally, pass `sandbox = FALSE` to an
+individual call:
 
 ```{r}
 # One real lookup while sandbox is otherwise on
@@ -358,13 +367,14 @@ Anything that depends on server-side state will differ from production:
 
 -   **Validation parity is approximate.** The sandbox validates records against
     the JSON Schema only. The real server additionally enforces things the
-    schema cannot express: resolution of `subject_field` values against
-    registered profiles, duplicate handling against existing data, and token
+    schema cannot express: duplicate handling against existing data and token
     permissions. Passing sandbox validation is a *necessary but not sufficient*
     condition for production acceptance.
--   **`subject` is always `NULL` in retrieved records.** The sandbox has no
-    profile registry, so it cannot emulate the server's record-to-profile
-    linkage. Code that displays or filters on subject fields will see
-    placeholder values in sandbox mode.
+-   **`subject` linkage is emulated only for registered athletes.** On retrieval
+    the sandbox resolves each record's `subject_field` value against athletes
+    created with `create_profile()`, returning the matched athlete (id, name,
+    sport) — or `NULL` if none is registered. Resolution happens at read time, so
+    athletes registered after ingestion backfill. Production would reject an
+    unresolved subject; the sandbox accepts it silently.
 
 See `?"csiapps-sandbox"` for full details.

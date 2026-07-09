@@ -185,18 +185,23 @@ from the `CSIAPPS_ACCESS_TOKEN` you already have in your environment.
 Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
 ```
 
-With that token set, the wrapped app runs locally and the header, organization
-lists, and other registration reads load your **real** identity from the API,
-exactly as they would after a production login. `check_secrets()` reports whether
-a token was found rather than erroring on the (unneeded) OAuth secrets. If no
-token is set, the app shell still renders but shows an unauthenticated notice
-prompting you to set a read-only `CSIAPPS_ACCESS_TOKEN`.
+With that token set, the wrapped app runs locally and the header loads your
+**real** identity (`/me`) from the API, exactly as it would after a production
+login. The token is used **only to emulate the login** — everything else (sport
+organizations, athletes, warehouse records) is dummy, served from the local
+sandbox (see `create_sport_org()`, `create_profile()`, and `vignette("api")`).
+`check_secrets()` reports whether a token was found rather than erroring on the
+(unneeded) OAuth secrets. If no token is set, the app shell still renders but
+shows an unauthenticated notice prompting you to set a read-only
+`CSIAPPS_ACCESS_TOKEN`.
 
-> **Note:** Sandbox mode is deliberately split. Warehouse calls made through
-> `make_request()` are emulated locally (see `vignette("api")`), but the
-> wrapper's registration reads (`/me`, organizations) use your real token
-> against the live API. Call `set_institute()` to match the institute that
-> issued your token.
+> **Note:** Sandbox mode never touches real client data. Warehouse calls made
+> through `make_request()` are emulated locally, and registration reads
+> (`fetch_org_options()`, `fetch_profiles()`) come from the local dummy
+> registry. Only `/me` uses your real token — call `set_institute()` to match
+> the institute that issued it, or that lookup is rejected.
+
+### Deploying
 
 Because the app code is identical in both modes, deploying is just a matter of
 turning sandbox mode off — no code changes required:
@@ -204,3 +209,14 @@ turning sandbox mode off — no code changes required:
 ```{r}
 options(csiapps.sandbox = FALSE) # or set CSIAPPS_ENV=production
 ```
+
+Once your app is wrapped and ready to deploy, generate a `manifest.json` from
+the app directory. The deployment target (Posit Connect / shinyapps.io) uses it
+to reproduce your package environment — including `csiapps` — so it must be
+regenerated whenever your dependencies change:
+
+```{r}
+rsconnect::writeManifest()
+```
+
+Commit the resulting `manifest.json` alongside your app.

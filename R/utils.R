@@ -44,7 +44,7 @@ check_secrets <- function(verbose = F, sandbox = is_sandbox_mode()) {
     if (nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
       message("csiapps sandbox: CSIAPPS_ACCESS_TOKEN found - real registration reads enabled")
     } else {
-      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running with a simulated identity (no real data)")
+      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running unauthenticated (set a token to emulate login and load /me)")
     }
     return(invisible(TRUE))
   }
@@ -133,8 +133,8 @@ flatten_record <- function(rec) {
 #' }
 fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_org_options() skipped — returning empty list (no real API call)")
-    return(list())
+    message("csiapps sandbox: fetch_org_options() reading local registry (see create_sport_org())")
+    return(lapply(unname(.sandbox_env$orgs), function(o) list(label = o$name, value = o$id)))
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
@@ -229,8 +229,13 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
 #' }
 fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_profiles() skipped — returning empty list (no real API call)")
-    return(list())
+    message("csiapps sandbox: fetch_profiles() reading local registry (see create_profile())")
+    profs <- unname(.sandbox_env$profiles)
+    sid   <- filters$sport_org_id
+    if (!is.null(sid)) {
+      profs <- Filter(function(p) identical(as.integer(p$sport$id), as.integer(sid)), profs)
+    }
+    return(profs)
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
@@ -298,8 +303,9 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
 #' }
 fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_profile() skipped — returning NULL (no real API call)")
-    return(NULL)
+    message("csiapps sandbox: fetch_profile() reading local registry (see create_profile())")
+    hit <- Filter(function(p) identical(as.integer(p$id), as.integer(profile_id)), .sandbox_env$profiles)
+    return(if (length(hit)) hit[[1]] else NULL)
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")

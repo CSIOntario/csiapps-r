@@ -87,16 +87,13 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
     user_token <- reactiveVal(NULL)
     userinfo   <- reactiveVal(NULL)
 
-    # org / profile state
-    org_options_rv      <- reactiveVal(NULL)
-
     if (isTRUE(sandbox)) {
 
       # ---------------- Sandbox: simulate the redirect ----------------
       # Skip the OAuth handshake entirely and seed the token from the
       # environment; the shared observeEvent() below consumes it exactly
       # as it would a token obtained from a real login.
-      .sandbox_seed_session(user_token, userinfo)
+      .sandbox_seed_session(user_token)
 
     } else {
 
@@ -165,7 +162,8 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
     # Load /me and update global access token when we get a token.
     # Shared by the production and sandbox paths: in sandbox the token is the
-    # developer's own, so `/me` and org loading hit the real registration API.
+    # developer's own and is used only to load the real `/me` identity; all
+    # other data (orgs, athletes, warehouse) is served from the local sandbox.
     observeEvent(user_token(), {
       tok <- user_token()
 
@@ -204,19 +202,6 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         if (!is.null(ui_me)) userinfo(ui_me)
       }
 
-      # 3) Load organization list *here* (no separate observer)
-      org_opts <- tryCatch(
-        fetch_org_options(access_token),  # pass explicit token, no race
-        error = function(e) {
-          showNotification(
-            paste("Error loading organizations:", conditionMessage(e)),
-            type = "error"
-          )
-          NULL
-        }
-      )
-      org_options_rv(org_opts)
-
     })
 
     # Auth status UI: first/last name + logout
@@ -234,7 +219,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       }
 
       if (isTRUE(tok$unauthenticated)) {
-        return(tags$p(HTML("Not authenticated &mdash; set CSIAPPS_ACCESS_TOKEN to use sandbox mode with real data.")))
+        return(tags$p(HTML("Not authenticated &mdash; set CSIAPPS_ACCESS_TOKEN to emulate login in sandbox mode.")))
       }
 
       ui_me <- userinfo()
@@ -258,7 +243,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       Sys.unsetenv("CSIAPPS_ACCESS_TOKEN")
       if (isTRUE(sandbox)) {
         # No IdP to redirect to; re-seed the simulated session instead
-        .sandbox_seed_session(user_token, userinfo)
+        .sandbox_seed_session(user_token)
       } else {
         user_token(NULL)
         #session$reload()
@@ -266,7 +251,11 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       }
     })
 
-    eval(body(app_specific_logic), envir = environment())
+    # Call the app's server function normally so it keeps its own lexical
+    # environment. Re-evaluating body() in the wrapper env severed the closure,
+    # so helpers/values the server fn captured from its defining scope became
+    # unreachable ("could not find ...") from inside its observers.
+    app_specific_logic(input, output, session)
 
   }
 }
@@ -374,102 +363,4 @@ footer_ui <- function() {
       tags$ul(class = "nav col-md-4 justify-content-end")
     )
   )
-}
-
-
-profile_card_server <- function(id, selected_profile_info) {
-  moduleServer(id, function(input, output, session) {
-    output$card <- renderUI({
-      info <- selected_profile_info()
-      if (is.null(info)) {
-        return(div(class = "card shadow-sm border-0 p-3", "No profile selected."))
-      }
-      initials <- profile_initials(info$name)
-
-      div(
-        class = "card shadow-sm border-0",
-        style = "max-width: 560px;",
-        div(
-          class = "row g-0 align-items-center",
-          div(
-            class = "col-auto p-3",
-            div(
-              initials,
-              class = "d-flex align-items-center justify-content-center fw-semibold",
-              style = paste(
-                "width:64px;height:64px;border-radius:50%;",
-                "background:#0d6efd;color:white;font-size:1.1rem;letter-spacing:0.02em;"
-              )
-            )
-          ),
-          div(
-            class = "col ps-0",
-            div(
-              class = "card-body py-3",
-              div(
-                class = "d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2",
-                h5(class = "mb-1", info$name),
-                span(class = "badge bg-secondary ms-0 ms-sm-2", info$role)
-              ),
-              div(
-                class = "text-muted mt-1 d-flex align-items-center",
-                tags$i(class = "bi bi-building me-2"),
-                span(info$organization)
-              )
-            )
-          )
-        )
-      )
-    })
-  })
-}
-
-profile_card_ui <- function(id) {
-  ns <- NS(id)
-  uiOutput(ns("card"))
-}
-
-profile_initials <- function(name) {
-  parts <- strsplit(name %||% "", "\\s+")[[1]]
-  parts <- parts[nzchar(parts)]
-  if (length(parts) == 0) return("?")
-  paste0(toupper(substr(parts, 1, 1)))[1:min(2, length(parts))] |>
-    paste(collapse = "")
-}
-
-profile_extract_card_info <- function(p) {
-  person <- p$person %||% list()
-  first  <- person$first_name %||% ""
-  last   <- person$last_name  %||% ""
-  name   <- trimws(paste(first, last))
-  if (!nzchar(name)) name <- "-"
-
-  role <- "-"
-  if (!is.null(p$current_nomination) &&
-      !is.null(p$current_nomination$role) &&
-      !is.null(p$current_nomination$role$verbose_name)) {
-    role <- p$current_nomination$role$verbose_name
-  }
-
-  org <- "-"
-  if (!is.null(p$current_nomination) &&
-      !is.null(p$current_nomination$organization) &&
-      !is.null(p$current_nomination$organization$name)) {
-    org <- p$current_nomination$organization$name
-  }
-
-  list(
-    name = name,
-    role = role,
-    organization = org
-  )
-}
-
-profile_build_label <- function(p) {
-  person <- p$person %||% list()
-  first  <- person$first_name %||% ""
-  last   <- person$last_name  %||% ""
-  label  <- trimws(paste(first, last))
-  if (!nzchar(label)) label <- paste("Profile", p$id %||% "")
-  label
 }

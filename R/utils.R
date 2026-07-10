@@ -44,7 +44,7 @@ check_secrets <- function(verbose = F, sandbox = is_sandbox_mode()) {
     if (nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
       message("csiapps sandbox: CSIAPPS_ACCESS_TOKEN found - real registration reads enabled")
     } else {
-      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running with a simulated identity (no real data)")
+      message("csiapps sandbox: no CSIAPPS_ACCESS_TOKEN set - running unauthenticated (set a token to emulate login and load /me)")
     }
     return(invisible(TRUE))
   }
@@ -116,8 +116,9 @@ flatten_record <- function(rec) {
 #' @param token Character. Authentication token. Defaults to the
 #'   `CSIAPPS_ACCESS_TOKEN` environment variable.
 #' @param sandbox Logical. When `TRUE` (the default in development), no network
-#'   call is made and an empty list is returned immediately. Set to `FALSE` for
-#'   production to fetch real organisations. Defaults to [is_sandbox_mode()].
+#'   call is made and the local dummy registry is returned (the orgs registered
+#'   with [create_sport_org()]). Set to `FALSE` to fetch real organisations from
+#'   the API. Defaults to [is_sandbox_mode()].
 #'
 #' @return A list of named lists, each with `label` (organisation name) and
 #'   `value` (organisation ID).
@@ -133,8 +134,8 @@ flatten_record <- function(rec) {
 #' }
 fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_org_options() skipped — returning empty list (no real API call)")
-    return(list())
+    message("csiapps sandbox: fetch_org_options() reading local registry (see create_sport_org())")
+    return(lapply(unname(.sandbox_env$orgs), function(o) list(label = o$name, value = o$id)))
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
@@ -194,12 +195,15 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
 #'   [CSIAPPS Swagger docs](https://apps.csiontario.ca/api/swagger/) for all
 #'   available parameters.
 #' @param sandbox Logical. When `TRUE` (the default in development), no network
-#'   call is made and an empty list is returned immediately. Set to `FALSE` for
-#'   production to fetch real profiles. Defaults to [is_sandbox_mode()].
+#'   call is made and profiles are read from the local dummy registry (those
+#'   created with [create_profile()]); only the `sport_org_id` filter is applied,
+#'   other filters are ignored. Set to `FALSE` to fetch real profiles from the
+#'   API. Defaults to [is_sandbox_mode()].
 #'
 #' @return A list of profile objects. Each element contains a `person` sub-list
-#'   (`first_name`, `last_name`, `dob`, `email`, ...) and a
-#'   `current_nomination` sub-list (`role`, `organization`, ...). See the
+#'   (`first_name`, `last_name`, `dob`, `email`, ...), a `sport` sub-list
+#'   (`id`, `name`), and top-level fields such as `status` and
+#'   `current_nomination`. See the
 #'   [CSIAPPS Swagger docs](https://apps.csiontario.ca/api/swagger/) for the
 #'   full schema.
 #'
@@ -229,8 +233,13 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
 #' }
 fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_profiles() skipped — returning empty list (no real API call)")
-    return(list())
+    message("csiapps sandbox: fetch_profiles() reading local registry (see create_profile())")
+    profs <- unname(.sandbox_env$profiles)
+    sid   <- filters$sport_org_id
+    if (!is.null(sid)) {
+      profs <- Filter(function(p) identical(as.integer(p$sport$id), as.integer(sid)), profs)
+    }
+    return(profs)
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
@@ -281,11 +290,14 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
 #'   `CSIAPPS_ACCESS_TOKEN` environment variable.
 #' @param profile_id Integer or character. The ID of the profile to retrieve.
 #' @param sandbox Logical. When `TRUE` (the default in development), no network
-#'   call is made and `NULL` is returned immediately. Set to `FALSE` for
-#'   production to fetch the real profile. Defaults to [is_sandbox_mode()].
+#'   call is made and the profile is looked up in the local dummy registry (those
+#'   created with [create_profile()]), returning `NULL` if no such id exists. Set
+#'   to `FALSE` to fetch the real profile from the API. Defaults to
+#'   [is_sandbox_mode()].
 #'
-#' @return A single profile object as a list, or `NULL` in sandbox mode. The
-#'   structure mirrors the list elements returned by [fetch_profiles()].
+#' @return A single profile object as a list, or `NULL` if no profile with that
+#'   id exists. The structure mirrors the list elements returned by
+#'   [fetch_profiles()].
 #'
 #' @seealso [fetch_profiles()] to retrieve multiple profiles,
 #'   [set_institute()] to configure the target institute.
@@ -298,8 +310,9 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
 #' }
 fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode()) {
   if (isTRUE(sandbox)) {
-    message("csiapps sandbox: fetch_profile() skipped — returning NULL (no real API call)")
-    return(NULL)
+    message("csiapps sandbox: fetch_profile() reading local registry (see create_profile())")
+    hit <- Filter(function(p) identical(as.integer(p$id), as.integer(profile_id)), .sandbox_env$profiles)
+    return(if (length(hit)) hit[[1]] else NULL)
   }
   if (is.null(token) || !nzchar(token)) {
     token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")

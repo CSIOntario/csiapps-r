@@ -22,5 +22,10 @@ Useful links:
 \author{
 \strong{Maintainer}: David Awosoga \email{dawosoga@csiontario.ca} (\href{https://orcid.org/0000-0002-2741-5770}{ORCID}) [copyright holder]
 
+Authors:
+\itemize{
+  \item Kyu Min Shim (\href{https://orcid.org/0009-0006-4161-9813}{ORCID})
+}
+
 }
 \keyword{internal}

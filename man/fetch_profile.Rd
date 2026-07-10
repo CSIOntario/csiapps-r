@@ -13,12 +13,15 @@ fetch_profile(token = NULL, profile_id, sandbox = is_sandbox_mode())
 \item{profile_id}{Integer or character. The ID of the profile to retrieve.}
 
 \item{sandbox}{Logical. When \code{TRUE} (the default in development), no network
-call is made and \code{NULL} is returned immediately. Set to \code{FALSE} for
-production to fetch the real profile. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
+call is made and the profile is looked up in the local dummy registry (those
+created with \code{\link[=create_profile]{create_profile()}}), returning \code{NULL} if no such id exists. Set
+to \code{FALSE} to fetch the real profile from the API. Defaults to
+\code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
 }
 \value{
-A single profile object as a list, or \code{NULL} in sandbox mode. The
-structure mirrors the list elements returned by \code{\link[=fetch_profiles]{fetch_profiles()}}.
+A single profile object as a list, or \code{NULL} if no profile with that
+id exists. The structure mirrors the list elements returned by
+\code{\link[=fetch_profiles]{fetch_profiles()}}.
 }
 \description{
 Retrieves one profile by its ID.

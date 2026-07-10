@@ -11,8 +11,9 @@ fetch_org_options(token = NULL, sandbox = is_sandbox_mode())
 \code{CSIAPPS_ACCESS_TOKEN} environment variable.}
 
 \item{sandbox}{Logical. When \code{TRUE} (the default in development), no network
-call is made and an empty list is returned immediately. Set to \code{FALSE} for
-production to fetch real organisations. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
+call is made and the local dummy registry is returned (the orgs registered
+with \code{\link[=create_sport_org]{create_sport_org()}}). Set to \code{FALSE} to fetch real organisations from
+the API. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
 }
 \value{
 A list of named lists, each with \code{label} (organisation name) and

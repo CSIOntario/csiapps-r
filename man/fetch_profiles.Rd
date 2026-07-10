@@ -17,13 +17,16 @@ include \code{sport_org_id} (integer, filter by organisation) and \code{sport}
 available parameters.}
 
 \item{sandbox}{Logical. When \code{TRUE} (the default in development), no network
-call is made and an empty list is returned immediately. Set to \code{FALSE} for
-production to fetch real profiles. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
+call is made and profiles are read from the local dummy registry (those
+created with \code{\link[=create_profile]{create_profile()}}); only the \code{sport_org_id} filter is applied,
+other filters are ignored. Set to \code{FALSE} to fetch real profiles from the
+API. Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}.}
 }
 \value{
 A list of profile objects. Each element contains a \code{person} sub-list
-(\code{first_name}, \code{last_name}, \code{dob}, \code{email}, ...) and a
-\code{current_nomination} sub-list (\code{role}, \code{organization}, ...). See the
+(\code{first_name}, \code{last_name}, \code{dob}, \code{email}, ...), a \code{sport} sub-list
+(\code{id}, \code{name}), and top-level fields such as \code{status} and
+\code{current_nomination}. See the
 \href{https://apps.csiontario.ca/api/swagger/}{CSIAPPS Swagger docs} for the
 full schema.
 }

@@ -27,5 +27,7 @@ reference:
   - csiapps-sandbox
   - is_sandbox_mode
   - register_sandbox_schema
+  - create_sport_org
+  - create_profile
   - clear_sandbox
   - browse_sandbox

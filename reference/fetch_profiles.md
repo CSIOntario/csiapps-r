@@ -28,17 +28,20 @@ fetch_profiles(token = NULL, filters = list(), sandbox = is_sandbox_mode())
 - sandbox:
 
   Logical. When `TRUE` (the default in development), no network call is
-  made and an empty list is returned immediately. Set to `FALSE` for
-  production to fetch real profiles. Defaults to
+  made and profiles are read from the local dummy registry (those
+  created with
+  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md));
+  only the `sport_org_id` filter is applied, other filters are ignored.
+  Set to `FALSE` to fetch real profiles from the API. Defaults to
   [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
 
 ## Value
 
 A list of profile objects. Each element contains a `person` sub-list
-(`first_name`, `last_name`, `dob`, `email`, ...) and a
-`current_nomination` sub-list (`role`, `organization`, ...). See the
-[CSIAPPS Swagger docs](https://apps.csiontario.ca/api/swagger/) for the
-full schema.
+(`first_name`, `last_name`, `dob`, `email`, ...), a `sport` sub-list
+(`id`, `name`), and top-level fields such as `status` and
+`current_nomination`. See the [CSIAPPS Swagger
+docs](https://apps.csiontario.ca/api/swagger/) for the full schema.
 
 ## See also
 

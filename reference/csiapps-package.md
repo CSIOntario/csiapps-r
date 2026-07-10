@@ -17,3 +17,7 @@ Useful links:
 
 **Maintainer**: David Awosoga <dawosoga@csiontario.ca>
 ([ORCID](https://orcid.org/0000-0002-2741-5770)) \[copyright holder\]
+
+Authors:
+
+- Kyu Min Shim ([ORCID](https://orcid.org/0009-0006-4161-9813))

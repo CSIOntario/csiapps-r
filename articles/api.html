@@ -122,11 +122,14 @@ your institute before authenticating.</p>
 <h3 id="registration-api">Registration API<a class="anchor" aria-label="anchor" href="#registration-api"></a>
 </h3>
 <p>The registration API provides access to profiles and organisations.
-Unlike the warehouse endpoints, these functions always contact the
-<strong>real</strong> registration API when <code>sandbox = FALSE</code>
-— they are not emulated locally. In sandbox mode (the default) they
-return empty results immediately with no network call, so dashboards can
-be built and tested without a live connection.</p>
+In sandbox mode (the default) these functions read from a <strong>local
+dummy registry</strong> instead of the network: seed it with
+<code><a href="../reference/create_sport_org.html">create_sport_org()</a></code> and <code><a href="../reference/create_profile.html">create_profile()</a></code>, and
+<code><a href="../reference/fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="../reference/fetch_profiles.html">fetch_profiles()</a></code> /
+<code><a href="../reference/fetch_profile.html">fetch_profile()</a></code> return that dummy data in the same shape
+the real API uses, so dashboards can be built and tested without a live
+connection. Pass <code>sandbox = FALSE</code> to contact the
+<strong>real</strong> registration API instead.</p>
 <div class="section level4">
 <h4 id="organisations">Organisations<a class="anchor" aria-label="anchor" href="#organisations"></a>
 </h4>
@@ -172,14 +175,23 @@ into a data frame for display or matching:</p>
 <div class="section level4">
 <h4 id="sandbox-behaviour">Sandbox behaviour<a class="anchor" aria-label="anchor" href="#sandbox-behaviour"></a>
 </h4>
-<p>In sandbox mode all three functions return immediately without a
-network call:</p>
+<p>In sandbox mode the three functions read whatever you have registered
+locally with <code><a href="../reference/create_sport_org.html">create_sport_org()</a></code> and
+<code><a href="../reference/create_profile.html">create_profile()</a></code>:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/fetch_org_options.html">fetch_org_options</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># returns list()  — sandbox = TRUE by default</span></span>
-<span><span class="fu"><a href="../reference/fetch_profiles.html">fetch_profiles</a></span><span class="op">(</span><span class="op">)</span>     <span class="co"># returns list()  — sandbox = TRUE by default</span></span>
-<span><span class="fu"><a href="../reference/fetch_profile.html">fetch_profile</a></span><span class="op">(</span><span class="fl">123L</span><span class="op">)</span>  <span class="co"># returns NULL    — sandbox = TRUE by default</span></span></code></pre></div>
-<p>To fetch real data during development without turning sandbox off
-globally, pass <code>sandbox = FALSE</code> to an individual call:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/create_sport_org.html">create_sport_org</a></span><span class="op">(</span><span class="st">"Rowing Canada"</span>, id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/create_profile.html">create_profile</a></span><span class="op">(</span><span class="fl">3</span>, sport_org_id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span>  <span class="co"># 3 unique athletes, names from babynames</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/fetch_org_options.html">fetch_org_options</a></span><span class="op">(</span><span class="op">)</span>                                 <span class="co"># the dummy orgs</span></span>
+<span><span class="fu"><a href="../reference/fetch_profiles.html">fetch_profiles</a></span><span class="op">(</span>filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sport_org_id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span><span class="op">)</span>  <span class="co"># the dummy athletes</span></span>
+<span><span class="fu"><a href="../reference/fetch_profile.html">fetch_profile</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>                                   <span class="co"># one dummy athlete, or NULL</span></span></code></pre></div>
+<p>Only the <code>sport_org_id</code> filter is honoured in sandbox;
+other filters are ignored. With nothing registered,
+<code><a href="../reference/fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="../reference/fetch_profiles.html">fetch_profiles()</a></code> return
+<code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> and <code><a href="../reference/fetch_profile.html">fetch_profile()</a></code> returns
+<code>NULL</code>. To fetch real data during development without turning
+sandbox off globally, pass <code>sandbox = FALSE</code> to an individual
+call:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># One real lookup while sandbox is otherwise on</span></span>
 <span><span class="va">orgs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_org_options.html">fetch_org_options</a></span><span class="op">(</span>sandbox <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
@@ -420,17 +432,19 @@ from production:</p>
 <li>
 <strong>Validation parity is approximate.</strong> The sandbox
 validates records against the JSON Schema only. The real server
-additionally enforces things the schema cannot express: resolution of
-<code>subject_field</code> values against registered profiles, duplicate
-handling against existing data, and token permissions. Passing sandbox
+additionally enforces things the schema cannot express: duplicate
+handling against existing data and token permissions. Passing sandbox
 validation is a <em>necessary but not sufficient</em> condition for
 production acceptance.</li>
 <li>
-<strong><code>subject</code> is always <code>NULL</code> in
-retrieved records.</strong> The sandbox has no profile registry, so it
-cannot emulate the server’s record-to-profile linkage. Code that
-displays or filters on subject fields will see placeholder values in
-sandbox mode.</li>
+<strong><code>subject</code> linkage is emulated only for registered
+athletes.</strong> On retrieval the sandbox resolves each record’s
+<code>subject_field</code> value against athletes created with
+<code><a href="../reference/create_profile.html">create_profile()</a></code>, returning the matched athlete (id, name,
+sport) — or <code>NULL</code> if none is registered. Resolution happens
+at read time, so athletes registered after ingestion backfill.
+Production would reject an unresolved subject; the sandbox accepts it
+silently.</li>
 </ul>
 <p>See <code><a href="../reference/csiapps-sandbox.html">?"csiapps-sandbox"</a></code> for full details.</p>
 </div>
@@ -446,7 +460,7 @@ sandbox mode.</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

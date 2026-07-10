@@ -20,8 +20,10 @@ fetch_org_options(token = NULL, sandbox = is_sandbox_mode())
 - sandbox:
 
   Logical. When `TRUE` (the default in development), no network call is
-  made and an empty list is returned immediately. Set to `FALSE` for
-  production to fetch real organisations. Defaults to
+  made and the local dummy registry is returned (the orgs registered
+  with
+  [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)).
+  Set to `FALSE` to fetch real organisations from the API. Defaults to
   [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
 
 ## Value

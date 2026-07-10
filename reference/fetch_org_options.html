@@ -59,8 +59,9 @@ label/value pairs, suitable for use in Shiny selectInput() choices."><meta prope
 
 <dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
 <dd><p>Logical. When <code>TRUE</code> (the default in development), no network
-call is made and an empty list is returned immediately. Set to <code>FALSE</code> for
-production to fetch real organisations. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>.</p></dd>
+call is made and the local dummy registry is returned (the orgs registered
+with <code><a href="create_sport_org.html">create_sport_org()</a></code>). Set to <code>FALSE</code> to fetch real organisations from
+the API. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -92,7 +93,7 @@ configure the target institute.</p></div>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

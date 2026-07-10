@@ -120,24 +120,30 @@ redirect. The redirect exists only to obtain an access token, and requires
 client credentials that cannot be safely distributed, so in sandbox mode
 <code><a href="server_wrapper.html">server_wrapper()</a></code> <strong>simulates the login</strong> instead: it seeds the session from
 the developer's existing <code>CSIAPPS_ACCESS_TOKEN</code> and hands it to the same code
-path a production login would. If that token is present, <code>/me</code> and the
-organization list are loaded from the <strong>real</strong> registration API, so the
-developer sees their real identity and organizations. If no token is set, the
-app shell still renders but shows an unauthenticated notice prompting the
-developer to set a read-only <code>CSIAPPS_ACCESS_TOKEN</code>. The same wrapped-app code
-therefore runs in both modes; only the <code>csiapps.sandbox</code> option differs.</p>
+path a production login would. The token is used <strong>only to emulate the
+login</strong>: if it is present, <code>/me</code> is loaded from the real API so the header
+shows the developer's real identity. All <em>data</em> – sport organizations,
+athletes/profiles, and warehouse records – is served from the local sandbox
+(the dummy registry and the emulated warehouse), never the live API. If no
+token is set, the app shell still renders but shows an unauthenticated notice
+prompting the developer to set a read-only <code>CSIAPPS_ACCESS_TOKEN</code>. The same
+wrapped-app code runs in both modes; only the <code>csiapps.sandbox</code> option differs.</p>
     </div>
     <div class="section level2">
     <h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a></h2>
 
 
-<ul><li><p><strong>Sandbox is not fully offline for wrapped apps.</strong> Warehouse endpoints
-routed through <code><a href="make_request.html">make_request()</a></code> are emulated locally, but the wrapper's
-registration reads (<code>/me</code>, organizations, profiles) bypass <code><a href="make_request.html">make_request()</a></code>
-and call the real API with your token. Sandbox mode is thus deliberately
-split: warehouse data is emulated, registration/auth data is real. Set the
-institute with <code><a href="set_institute.html">set_institute()</a></code> to match the institute that issued your
-token, or those reads will be rejected.
+<ul><li><p><strong>The access token is used only to emulate login.</strong> A wrapped app's <code>/me</code>
+identity is fetched from the real API with your token, so set the institute
+with <code><a href="set_institute.html">set_institute()</a></code> to match the institute that issued it or <code>/me</code> is
+rejected. Everything else is dummy: sport organizations and athletes come
+from the local registry (<code><a href="create_sport_org.html">create_sport_org()</a></code>, <code><a href="create_profile.html">create_profile()</a></code>) and
+warehouse reads/writes are emulated in memory. No real client data is read.</p></li>
+<li><p><strong>Only warehouse endpoints are routed through <code><a href="make_request.html">make_request()</a></code>.</strong> Calling
+<code>make_request("api/registration/...")</code> in sandbox raises a 501; use the
+<code><a href="fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="fetch_profiles.html">fetch_profiles()</a></code> helpers, which read the dummy
+registry instead. In sandbox, <code><a href="fetch_profiles.html">fetch_profiles()</a></code> honours only the
+<code>sport_org_id</code> filter; other filters are ignored.
 The sandbox faithfully simulates the <em>schema contract</em>, not the warehouse.
 Anything that depends on server-side state will differ from production:</p></li>
 <li><p><strong>Validation parity is approximate.</strong> Sandbox ingestion validates records
@@ -150,13 +156,14 @@ and token permissions. Validator implementations may also differ on edge
 cases (e.g. <code>format</code> keyword enforcement). Passing sandbox validation is
 therefore a <em>necessary but not sufficient</em> condition for production
 acceptance – do not treat a green sandbox run as a guarantee.</p></li>
-<li><p><strong><code>subject</code> is always <code>NULL</code> in retrieved records.</strong> In production the
-server links each ingested record to a registered profile and returns it
-(name, sport, ...) in the record envelope. The sandbox has no profile
-registry, so it cannot emulate this linkage and returns <code>subject = NULL</code>
-rather than fabricating misleading data. Code that displays or filters on
-subject fields will see placeholder values, and mistyped <code>subject_field</code>
-values that production would flag are accepted silently.</p></li>
+<li><p><strong><code>subject</code> linkage is emulated only for registered athletes.</strong> On
+ingestion the sandbox resolves each record's <code>subject_field</code> value against
+athletes registered with <code><a href="create_profile.html">create_profile()</a></code> and returns the matched athlete
+(id, name, sport) in the record envelope, mirroring production. If no
+athlete matches – because none was registered or the <code>subject_field</code> value
+is mistyped – <code>subject</code> is <code>NULL</code> rather than fabricated. Production would
+reject an unresolved subject; the sandbox accepts it silently, so a green
+sandbox ingest does not guarantee the server will link every record.</p></li>
 </ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -168,7 +175,7 @@ values that production would flag are accepted silently.</p></li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

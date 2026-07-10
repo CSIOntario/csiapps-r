@@ -50,30 +50,43 @@ safely distributed, so in sandbox mode
 [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
 **simulates the login** instead: it seeds the session from the
 developer's existing `CSIAPPS_ACCESS_TOKEN` and hands it to the same
-code path a production login would. If that token is present, `/me` and
-the organization list are loaded from the **real** registration API, so
-the developer sees their real identity and organizations. If no token is
-set, the app shell still renders but shows an unauthenticated notice
-prompting the developer to set a read-only `CSIAPPS_ACCESS_TOKEN`. The
-same wrapped-app code therefore runs in both modes; only the
-`csiapps.sandbox` option differs.
+code path a production login would. The token is used **only to emulate
+the login**: if it is present, `/me` is loaded from the real API so the
+header shows the developer's real identity. All *data* – sport
+organizations, athletes/profiles, and warehouse records – is served from
+the local sandbox (the dummy registry and the emulated warehouse), never
+the live API. If no token is set, the app shell still renders but shows
+an unauthenticated notice prompting the developer to set a read-only
+`CSIAPPS_ACCESS_TOKEN`. The same wrapped-app code runs in both modes;
+only the `csiapps.sandbox` option differs.
 
 ## Limitations
 
-- **Sandbox is not fully offline for wrapped apps.** Warehouse endpoints
-  routed through
-  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
-  are emulated locally, but the wrapper's registration reads (`/me`,
-  organizations, profiles) bypass
-  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
-  and call the real API with your token. Sandbox mode is thus
-  deliberately split: warehouse data is emulated, registration/auth data
-  is real. Set the institute with
+- **The access token is used only to emulate login.** A wrapped app's
+  `/me` identity is fetched from the real API with your token, so set
+  the institute with
   [`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
-  to match the institute that issued your token, or those reads will be
-  rejected. The sandbox faithfully simulates the *schema contract*, not
-  the warehouse. Anything that depends on server-side state will differ
-  from production:
+  to match the institute that issued it or `/me` is rejected. Everything
+  else is dummy: sport organizations and athletes come from the local
+  registry
+  ([`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md),
+  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md))
+  and warehouse reads/writes are emulated in memory. No real client data
+  is read.
+
+- **Only warehouse endpoints are routed through
+  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).**
+  Calling `make_request("api/registration/...")` in sandbox raises a
+  501; use the
+  [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+  /
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  helpers, which read the dummy registry instead. In sandbox,
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  honours only the `sport_org_id` filter; other filters are ignored. The
+  sandbox faithfully simulates the *schema contract*, not the warehouse.
+  Anything that depends on server-side state will differ from
+  production:
 
 - **Validation parity is approximate.** Sandbox ingestion validates
   records against the JSON Schema with Ajv (via `jsonvalidate`), which
@@ -87,11 +100,13 @@ same wrapped-app code therefore runs in both modes; only the
   not sufficient* condition for production acceptance – do not treat a
   green sandbox run as a guarantee.
 
-- **`subject` is always `NULL` in retrieved records.** In production the
-  server links each ingested record to a registered profile and returns
-  it (name, sport, ...) in the record envelope. The sandbox has no
-  profile registry, so it cannot emulate this linkage and returns
-  `subject = NULL` rather than fabricating misleading data. Code that
-  displays or filters on subject fields will see placeholder values, and
-  mistyped `subject_field` values that production would flag are
-  accepted silently.
+- **`subject` linkage is emulated only for registered athletes.** On
+  ingestion the sandbox resolves each record's `subject_field` value
+  against athletes registered with
+  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+  and returns the matched athlete (id, name, sport) in the record
+  envelope, mirroring production. If no athlete matches – because none
+  was registered or the `subject_field` value is mistyped – `subject` is
+  `NULL` rather than fabricated. Production would reject an unresolved
+  subject; the sandbox accepts it silently, so a green sandbox ingest
+  does not guarantee the server will link every record.

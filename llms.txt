@@ -62,6 +62,10 @@ Functions for simulating warehouse workflows in a local sandbox.
   : Check whether sandbox mode is enabled globally
 - [`register_sandbox_schema()`](https://csiontario.github.io/csiapps/reference/register_sandbox_schema.md)
   : Register a JSON schema in the local sandbox
+- [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+  : Create a dummy sport organization in the sandbox
+- [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+  : Create dummy athlete profiles in the sandbox
 - [`clear_sandbox()`](https://csiontario.github.io/csiapps/reference/clear_sandbox.md)
   : Clear the local sandbox
 - [`browse_sandbox()`](https://csiontario.github.io/csiapps/reference/browse_sandbox.md)

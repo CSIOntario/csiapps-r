@@ -70,15 +70,18 @@ available parameters.</p></dd>
 
 <dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
 <dd><p>Logical. When <code>TRUE</code> (the default in development), no network
-call is made and an empty list is returned immediately. Set to <code>FALSE</code> for
-production to fetch real profiles. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>.</p></dd>
+call is made and profiles are read from the local dummy registry (those
+created with <code><a href="create_profile.html">create_profile()</a></code>); only the <code>sport_org_id</code> filter is applied,
+other filters are ignored. Set to <code>FALSE</code> to fetch real profiles from the
+API. Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list of profile objects. Each element contains a <code>person</code> sub-list
-(<code>first_name</code>, <code>last_name</code>, <code>dob</code>, <code>email</code>, ...) and a
-<code>current_nomination</code> sub-list (<code>role</code>, <code>organization</code>, ...). See the
+(<code>first_name</code>, <code>last_name</code>, <code>dob</code>, <code>email</code>, ...), a <code>sport</code> sub-list
+(<code>id</code>, <code>name</code>), and top-level fields such as <code>status</code> and
+<code>current_nomination</code>. See the
 <a href="https://apps.csiontario.ca/api/swagger/" class="external-link">CSIAPPS Swagger docs</a> for the
 full schema.</p>
     </div>
@@ -121,7 +124,7 @@ full schema.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

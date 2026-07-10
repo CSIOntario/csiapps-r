@@ -54,12 +54,21 @@ result <- make_request(
 
 ### Registration API
 
-The registration API provides access to profiles and organisations.
-Unlike the warehouse endpoints, these functions always contact the
-**real** registration API when `sandbox = FALSE` — they are not emulated
-locally. In sandbox mode (the default) they return empty results
-immediately with no network call, so dashboards can be built and tested
-without a live connection.
+The registration API provides access to profiles and organisations. In
+sandbox mode (the default) these functions read from a **local dummy
+registry** instead of the network: seed it with
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+and
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+and
+[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+/
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+/
+[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+return that dummy data in the same shape the real API uses, so
+dashboards can be built and tested without a live connection. Pass
+`sandbox = FALSE` to contact the **real** registration API instead.
 
 #### Organisations
 
@@ -118,18 +127,31 @@ profile$person$first_name
 
 #### Sandbox behaviour
 
-In sandbox mode all three functions return immediately without a network
-call:
+In sandbox mode the three functions read whatever you have registered
+locally with
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+and
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md):
 
 ``` r
 
-fetch_org_options()  # returns list()  — sandbox = TRUE by default
-fetch_profiles()     # returns list()  — sandbox = TRUE by default
-fetch_profile(123L)  # returns NULL    — sandbox = TRUE by default
+create_sport_org("Rowing Canada", id = 42L)
+create_profile(3, sport_org_id = 42L)  # 3 unique athletes, names from babynames
+
+fetch_org_options()                                 # the dummy orgs
+fetch_profiles(filters = list(sport_org_id = 42L))  # the dummy athletes
+fetch_profile(1L)                                   # one dummy athlete, or NULL
 ```
 
-To fetch real data during development without turning sandbox off
-globally, pass `sandbox = FALSE` to an individual call:
+Only the `sport_org_id` filter is honoured in sandbox; other filters are
+ignored. With nothing registered,
+[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+/
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+return [`list()`](https://rdrr.io/r/base/list.html) and
+[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+returns `NULL`. To fetch real data during development without turning
+sandbox off globally, pass `sandbox = FALSE` to an individual call:
 
 ``` r
 
@@ -400,14 +422,17 @@ production:
 
 - **Validation parity is approximate.** The sandbox validates records
   against the JSON Schema only. The real server additionally enforces
-  things the schema cannot express: resolution of `subject_field` values
-  against registered profiles, duplicate handling against existing data,
-  and token permissions. Passing sandbox validation is a *necessary but
-  not sufficient* condition for production acceptance.
-- **`subject` is always `NULL` in retrieved records.** The sandbox has
-  no profile registry, so it cannot emulate the server’s
-  record-to-profile linkage. Code that displays or filters on subject
-  fields will see placeholder values in sandbox mode.
+  things the schema cannot express: duplicate handling against existing
+  data and token permissions. Passing sandbox validation is a *necessary
+  but not sufficient* condition for production acceptance.
+- **`subject` linkage is emulated only for registered athletes.** On
+  retrieval the sandbox resolves each record’s `subject_field` value
+  against athletes created with
+  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+  returning the matched athlete (id, name, sport) — or `NULL` if none is
+  registered. Resolution happens at read time, so athletes registered
+  after ingestion backfill. Production would reject an unresolved
+  subject; the sandbox accepts it silently.
 
 See
 [`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)

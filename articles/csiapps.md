@@ -200,24 +200,33 @@ CSIAPPS to authenticate, it seeds the session from the
 Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
 ```
 
-With that token set, the wrapped app runs locally and the header,
-organization lists, and other registration reads load your **real**
-identity from the API, exactly as they would after a production login.
+With that token set, the wrapped app runs locally and the header loads
+your **real** identity (`/me`) from the API, exactly as it would after a
+production login. The token is used **only to emulate the login** —
+everything else (sport organizations, athletes, warehouse records) is
+dummy, served from the local sandbox (see
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md),
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+and
+[`vignette("api")`](https://csiontario.github.io/csiapps/articles/api.md)).
 [`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
 reports whether a token was found rather than erroring on the (unneeded)
 OAuth secrets. If no token is set, the app shell still renders but shows
 an unauthenticated notice prompting you to set a read-only
 `CSIAPPS_ACCESS_TOKEN`.
 
-> **Note:** Sandbox mode is deliberately split. Warehouse calls made
-> through
+> **Note:** Sandbox mode never touches real client data. Warehouse calls
+> made through
 > [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
-> are emulated locally (see
-> [`vignette("api")`](https://csiontario.github.io/csiapps/articles/api.md)),
-> but the wrapper’s registration reads (`/me`, organizations) use your
-> real token against the live API. Call
+> are emulated locally, and registration reads
+> ([`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
+> [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md))
+> come from the local dummy registry. Only `/me` uses your real token —
+> call
 > [`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
-> to match the institute that issued your token.
+> to match the institute that issued it, or that lookup is rejected.
+
+### Deploying
 
 Because the app code is identical in both modes, deploying is just a
 matter of turning sandbox mode off — no code changes required:
@@ -226,3 +235,15 @@ matter of turning sandbox mode off — no code changes required:
 
 options(csiapps.sandbox = FALSE) # or set CSIAPPS_ENV=production
 ```
+
+Once your app is wrapped and ready to deploy, generate a `manifest.json`
+from the app directory. The deployment target (Posit Connect /
+shinyapps.io) uses it to reproduce your package environment — including
+`csiapps` — so it must be regenerated whenever your dependencies change:
+
+``` r
+
+rsconnect::writeManifest()
+```
+
+Commit the resulting `manifest.json` alongside your app.

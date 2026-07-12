@@ -25,8 +25,24 @@ test_that("check_secrets still validates OAuth secrets when sandbox is off", {
 # ---- ui_wrapper --------------------------------------------------------
 
 test_that("ui_wrapper shows a sandbox banner only in sandbox mode", {
-  expect_match(as.character(ui_wrapper(sandbox = TRUE)), "SANDBOX MODE")
-  expect_false(grepl("SANDBOX MODE", as.character(ui_wrapper(sandbox = FALSE))))
+  expect_match(as.character(ui_wrapper(sandbox = TRUE)), "Sandbox mode")
+  expect_false(grepl("Sandbox mode", as.character(ui_wrapper(sandbox = FALSE))))
+})
+
+test_that("ui_wrapper injects locked, theme-independent chrome styles", {
+  # `tags$head` content is hoisted by htmltools; render it the way Shiny does so
+  # the injected <style> materialises (as.character() on the tagList drops head).
+  rendered <- htmltools::renderTags(ui_wrapper(shiny::div("app content")))
+  head <- paste(as.character(rendered$head), collapse = "")
+
+  # Stable hook the injected CSS targets
+  expect_match(rendered$html, 'id="csi-navbar"')
+  # Scoped style block that pins the brand appearance and stacking
+  expect_match(head, "#csi-navbar")
+  expect_match(head, "position: sticky", fixed = TRUE)
+  # Neutral-frame theme: white bar with a CSI-red brand accent line
+  expect_match(head, "background-color: #ffffff !important", fixed = TRUE)
+  expect_match(head, "border-bottom: 3px solid #d81f26 !important", fixed = TRUE)
 })
 
 # ---- server_wrapper: simulated login -----------------------------------

@@ -30,9 +30,11 @@ global_wrapper <- function(code) {
 ui_wrapper <- function(..., sandbox = is_sandbox_mode()) {
   sandbox_banner <- if (isTRUE(sandbox)) {
     tags$div(
-      class = "text-center small py-1 bg-warning-subtle text-dark border-bottom",
-      style = "background:#fff3cd;",
-      "SANDBOX MODE — not connected to the live warehouse"
+      class = "text-center border-bottom",
+      style = "background:#faf6ec;color:#8a6d3b;font-size:12px;padding:3px 0;letter-spacing:.02em;",
+      # HTML entity (not a literal em-dash) so it renders correctly regardless
+      # of the served page's charset.
+      HTML("Sandbox mode &mdash; not connected to the live warehouse")
     )
   }
 
@@ -47,7 +49,8 @@ ui_wrapper <- function(..., sandbox = is_sandbox_mode()) {
       });
       "
       )),
-      tags$link(rel=" shortcut icon", href="https://csiontario.ca/wp-content/uploads/2022/04/cropped-CSIO-Favicon-192x192.png")
+      tags$link(rel=" shortcut icon", href="https://csiontario.ca/wp-content/uploads/2022/04/cropped-CSIO-Favicon-192x192.png"),
+      csi_chrome_styles()
     ),
     navbar_ui(),
     sandbox_banner,
@@ -216,7 +219,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       }
 
       if (isTRUE(tok$unauthenticated)) {
-        return(tags$p("Not authenticated — set CSIAPPS_ACCESS_TOKEN to emulate login in sandbox mode."))
+        return(tags$p(HTML("Not authenticated &mdash; set CSIAPPS_ACCESS_TOKEN to emulate login in sandbox mode.")))
       }
 
       ui_me <- userinfo()
@@ -261,9 +264,73 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 # Navbar, footer, profile card, tabs
 # -------------------------------------------------------------------
 
+# Scoped, high-specificity styles that pin the CSI navbar/footer appearance so
+# it does not depend on the wrapped app's Bootstrap theme or CSS. Targeted by id
+# and marked `!important` so an app that sets `bs_theme()` or injects CSS cannot
+# override the brand background, text colour, or stacking. Injected into
+# `ui_wrapper()`'s <head>.
+csi_chrome_styles <- function() {
+  # Chrome appearance. The default "neutral frame" keeps the bar on a white
+  # surface so it complements any app palette and the CSI logo sits on its
+  # native background; a thin CSI-red accent line carries the brand, and a soft
+  # shadow + hairline separate the chrome from any app colour. Flip `theme` to
+  # "dark" for the older dark-slab look (which adds a white plate behind the
+  # logo for contrast). Everything is scoped by id and marked `!important` so a
+  # wrapped app's theme/CSS cannot override it.
+  theme  <- "neutral"
+  accent <- "#d81f26"  # CSI red
+
+  if (identical(theme, "dark")) {
+    bar_bg        <- "#212529"
+    bar_text      <- "#ffffff"
+    navbar_shadow <- ""
+    logo_plate    <- "
+    #csi-navbar .navbar-brand img {
+      background: #ffffff; padding: 4px 8px; border-radius: 6px;
+    }"
+    footer_border <- sprintf("border-top: 3px solid %s !important;", accent)
+  } else {
+    bar_bg        <- "#ffffff"
+    bar_text      <- "#1f2937"
+    navbar_shadow <- "box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);"
+    logo_plate    <- ""
+    footer_border <- "border-top: 1px solid #e6e6e6 !important;"
+  }
+
+  tags$style(HTML(sprintf(
+    "
+    #csi-navbar {
+      background-color: %1$s !important;
+      border-bottom: 3px solid %3$s !important;  /* CSI-red brand accent */
+      %4$s
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+    }
+    #csi-navbar .navbar-brand,
+    #csi-navbar .navbar-brand:hover,
+    #csi-navbar .navbar-nav .nav-link {
+      color: %2$s !important;
+    }
+    %5$s
+    #footer {
+      background-color: %1$s !important;
+      color: %2$s !important;
+      %6$s
+      z-index: 1030;
+    }
+    #footer p, #footer a { color: %2$s !important; }
+    ",
+    bar_bg, bar_text, accent, navbar_shadow, logo_plate, footer_border
+  )))
+}
+
 navbar_ui <- function() {
   tags$nav(
-    class = "navbar navbar-expand-lg navbar-dark bg-dark px-3",
+    id = "csi-navbar",
+    # Fallback classes for the default neutral theme; csi_chrome_styles() is the
+    # authority (overrides via id + !important regardless of these).
+    class = "navbar navbar-expand-lg navbar-light bg-white px-3",
     tags$div(
       class = "container-fluid",
       tags$a(
@@ -275,7 +342,7 @@ navbar_ui <- function() {
             "https://www.csipacific.ca/wp-content/uploads/2024/05/csi-pacific-logo-main.png",
             "https://csiontario.ca/wp-content/uploads/2022/03/logo-csi-ontario.png"
           ),
-          height = "80px",
+          height = "48px",
           style = "margin-right: 8px;"
         ),
         #tags$span(class = "h5 mb-0", "CSIP Apps")
@@ -290,9 +357,9 @@ footer_ui <- function() {
     class = "mt-4 bg-dark text-white border-top border-light fixed-bottom",
     tags$div(
       class = "d-flex flex-wrap justify-content-between align-items-center py-3 container",
-      tags$p(paste("\u00A9", format(Sys.Date(), "%Y"),
+      tags$p(HTML(paste0("&copy; ", format(Sys.Date(), "%Y"), " ",
                    ifelse(package_state$INSTITUTE == "csipacific", "CSI Pacific", "CSI Ontario")
-                   ), class = "col-md-4 mb-0"),
+                   )), class = "col-md-4 mb-0"),
       tags$ul(class = "nav col-md-4 justify-content-end")
     )
   )

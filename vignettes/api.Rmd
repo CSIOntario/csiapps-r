@@ -119,6 +119,13 @@ To ingest data records into the warehouse, we make a POST request to the `/api/w
 Users supply the `source` (uuid) of the target *data source*,
 a list of `records` to be ingested, and (optionally) the `subject_field` by which each record can be uniquely assigned to a user. The records must comply with the schema defined for the target data source.
 
+> **Note:** The `source` uuid is provisioned by the CSIAPPS team when they set up
+> the remote data warehouse for your app, and supplied through the `SOURCE_UUID`
+> environment variable — the app developer does not choose or hard-code it. Read
+> it as `Sys.getenv("SOURCE_UUID")` (as below) so the same code runs in
+> development and production. See the [Sandbox Mode](sandbox.html) article for how
+> this works during local development.
+
 
 #### JSON Schema Definition
 

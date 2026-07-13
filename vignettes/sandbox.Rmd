@@ -246,11 +246,21 @@ and storing accepted payloads locally:
 
 ### 1. Register a data source (schema)
 
-The sandbox needs a schema to validate against. Register one under any
-identifying string — a real production uuid is **not** required. The schema may
-be an R list, a JSON string, or a path to a JSON file.
+> **You never handle the real data source uuid.** In production, a CSIAPPS
+> insider provisions the remote warehouse and establishes the source uuid for
+> your app, supplying it through the `SOURCE_UUID` environment variable. Your app
+> code should therefore reference the source **only** as `Sys.getenv("SOURCE_UUID")`
+> — never a hard-coded uuid — so the same code runs unchanged in development and
+> in production. During development you set `SOURCE_UUID` yourself to any
+> throwaway placeholder; its exact value is irrelevant to the sandbox.
+
+Set a placeholder for development and register a schema under it. The sandbox
+accepts any identifying string as the source — a real production uuid is **not**
+required. The schema may be an R list, a JSON string, or a path to a JSON file.
 
 ```{r}
+Sys.setenv(SOURCE_UUID = "dev-placeholder") # dev only; CSIAPPS sets this in production
+
 schema <- '{
   "title": "A registration form",
   "type": "object",
@@ -264,7 +274,7 @@ schema <- '{
   }
 }'
 
-register_sandbox_schema("dummy-1234", schema)
+register_sandbox_schema(Sys.getenv("SOURCE_UUID"), schema)
 ```
 
 Here `id` is the field that uniquely assigns each record to a subject. You can
@@ -273,7 +283,7 @@ nested under `head_primary_definition$schema`, exactly like the real API:
 
 ```{r}
 data_source <- make_request(
-  endpoint = paste0("api/warehouse/data-sources/", "dummy-1234")
+  endpoint = paste0("api/warehouse/data-sources/", Sys.getenv("SOURCE_UUID"))
 )
 schema <- data_source$head_primary_definition$schema
 ```
@@ -305,15 +315,16 @@ stopifnot(all(sapply(records, validate_record)))
 Ingestion is a `POST` to the ingestion endpoint. The sandbox validates every
 record against the registered schema before accepting it, stores accepted
 payloads in memory, and writes a JSON copy to disk for
-inspection. Supply the `source` (your dummy uuid), the `records`, and optionally
-the `subject_field` that links each record to an athlete.
+inspection. Supply the `source` (the same `Sys.getenv("SOURCE_UUID")` your
+production app uses), the `records`, and optionally the `subject_field` that
+links each record to an athlete.
 
 ```{r}
 result <- make_request(
   endpoint = "api/warehouse/ingestion/primary/",
   method   = "POST",
   body = list(
-    source        = "dummy-1234",
+    source        = Sys.getenv("SOURCE_UUID"),
     records       = records,
     subject_field = "id"
   )
@@ -330,7 +341,7 @@ bad <- list(list(firstName = "No", lastName = "Id"))
 make_request(
   endpoint = "api/warehouse/ingestion/primary/",
   method   = "POST",
-  body     = list(source = "dummy-1234", records = bad, subject_field = "id")
+  body     = list(source = Sys.getenv("SOURCE_UUID"), records = bad, subject_field = "id")
 )
 #> Error: ... validation failed for record(s) 1 ...
 ```
@@ -344,7 +355,7 @@ parameter is `source_uuid`; set `paginate = TRUE` to return all matching records
 ```{r}
 records <- make_request(
   endpoint = "api/warehouse/data-records",
-  query    = list(source_uuid = "dummy-1234"),
+  query    = list(source_uuid = Sys.getenv("SOURCE_UUID")),
   paginate = TRUE
 )
 ```
@@ -362,16 +373,16 @@ Accepted payloads are written as pretty-printed JSON, one folder per data source
 so you can inspect the exact JSON that would have been sent to the API:
 
 ```{r}
-browse_sandbox("dummy-1234") # opens the payload folder in the file explorer
-browse_sandbox()             # opens the sandbox root
+browse_sandbox(Sys.getenv("SOURCE_UUID")) # opens the payload folder in the file explorer
+browse_sandbox()                          # opens the sandbox root
 ```
 
 To reset state between tests, clear a single source or the entire sandbox. This
 also removes the on-disk payload files, and is convenient as test teardown:
 
 ```{r}
-clear_sandbox("dummy-1234") # clear one source
-clear_sandbox()             # clear everything (schemas, records, orgs, profiles)
+clear_sandbox(Sys.getenv("SOURCE_UUID")) # clear one source
+clear_sandbox()                          # clear everything (schemas, records, orgs, profiles)
 ```
 
 Sandbox state lasts only for the R session.
@@ -389,17 +400,20 @@ Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
 set_institute("csiontario")
 check_secrets()
 
-# 2. Seed the registration registry
+# 2. Point the app at a placeholder source (CSIAPPS sets the real one in production)
+Sys.setenv(SOURCE_UUID = "dev-placeholder")
+
+# 3. Seed the registration registry
 org <- create_sport_org("Rowing Canada")
 create_profile(3, org$id, first_names = c("Ada", "Blair", "Cai"),
                           last_names  = c("Nkemelu", "Okafor", "Zhang"))
 
-# 3. Read it back like production
+# 4. Read it back like production
 orgs     <- fetch_org_options()
 athletes <- fetch_profiles(filters = list(sport_org_id = org$id))
 
-# 4. Register a warehouse schema and ingest records keyed to those athletes
-register_sandbox_schema("dummy-1234", '{
+# 5. Register a warehouse schema and ingest records keyed to those athletes
+register_sandbox_schema(Sys.getenv("SOURCE_UUID"), '{
   "type": "object",
   "required": ["athlete_id", "weight"],
   "properties": {
@@ -412,7 +426,7 @@ make_request(
   endpoint = "api/warehouse/ingestion/primary/",
   method   = "POST",
   body = list(
-    source        = "dummy-1234",
+    source        = Sys.getenv("SOURCE_UUID"),
     records       = list(
       list(athlete_id = athletes[[1]]$id, weight = 72.5),
       list(athlete_id = athletes[[2]]$id, weight = 68.1)
@@ -421,19 +435,22 @@ make_request(
   )
 )
 
-# 5. Pull the records back; subjects resolve to the registered athletes
+# 6. Pull the records back; subjects resolve to the registered athletes
 make_request(
   endpoint = "api/warehouse/data-records",
-  query    = list(source_uuid = "dummy-1234"),
+  query    = list(source_uuid = Sys.getenv("SOURCE_UUID")),
   paginate = TRUE
 )
 
-# 6. Reset when done
+# 7. Reset when done
 clear_sandbox()
 ```
 
-When this code is ready for production, disable sandbox mode and swap in the real
-source uuid — **no other changes are needed**.
+When this code is deployed, disable sandbox mode and let the CSIAPPS team set
+`SOURCE_UUID` to the real warehouse uuid they provision — the app code above is
+**unchanged**. The developer never handles the real uuid, and the schema
+registration in step 5 is development-only scaffolding: in production the schema
+already lives in the remote warehouse.
 
 ## Limitations
 

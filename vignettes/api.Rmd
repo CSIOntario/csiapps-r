@@ -35,9 +35,11 @@ Below are some common use cases for interacting with the API endpoints using `cs
 
 > **Note:** By default, `csiapps` runs in **sandbox mode**, so the `make_request()`
 > calls below are routed to a local, in-memory warehouse rather than the production
-> API. This lets you develop and test safely without touching production data. See
-> [Sandbox Mode](#sandbox-mode) below for how it works and how it is turned off for
-> deployment.
+> API. This lets you develop and test safely without touching production data. This
+> article documents the **production** REST API semantics; for the full local
+> workflow — registering orgs and athletes, schemas, ingestion, and retrieval
+> against the emulated warehouse — see the dedicated [Sandbox Mode](sandbox.html)
+> article.
 
 ### Authorization Status
 
@@ -57,13 +59,11 @@ result <- make_request(
 
 ### Registration API
 
-The registration API provides access to profiles and organisations. In sandbox
-mode (the default) these functions read from a **local dummy registry** instead
-of the network: seed it with `create_sport_org()` and `create_profile()`, and
-`fetch_org_options()` / `fetch_profiles()` / `fetch_profile()` return that dummy
-data in the same shape the real API uses, so dashboards can be built and tested
-without a live connection. Pass `sandbox = FALSE` to contact the **real**
-registration API instead.
+The registration API provides access to profiles and organisations via
+`fetch_org_options()`, `fetch_profiles()`, and `fetch_profile()`. The examples
+below pass `sandbox = FALSE` to contact the **real** registration API. In
+sandbox mode (the default) these same helpers read from a local dummy registry —
+see the [Sandbox Mode](sandbox.html) article for that workflow.
 
 #### Organisations
 
@@ -111,31 +111,6 @@ profile_df <- do.call(rbind, lapply(profiles, function(p) {
 ```{r}
 profile <- fetch_profile(profile_id = 123L, sandbox = FALSE)
 profile$person$first_name
-```
-
-#### Sandbox behaviour
-
-In sandbox mode the three functions read whatever you have registered locally
-with `create_sport_org()` and `create_profile()`:
-
-```{r}
-create_sport_org("Rowing Canada", id = 42L)
-create_profile(3, sport_org_id = 42L)  # 3 unique athletes, names from babynames
-
-fetch_org_options()                                 # the dummy orgs
-fetch_profiles(filters = list(sport_org_id = 42L))  # the dummy athletes
-fetch_profile(1L)                                   # one dummy athlete, or NULL
-```
-
-Only the `sport_org_id` filter is honoured in sandbox; other filters are
-ignored. With nothing registered, `fetch_org_options()` / `fetch_profiles()`
-return `list()` and `fetch_profile()` returns `NULL`. To fetch real data during
-development without turning sandbox off globally, pass `sandbox = FALSE` to an
-individual call:
-
-```{r}
-# One real lookup while sandbox is otherwise on
-orgs <- fetch_org_options(sandbox = FALSE)
 ```
 
 ### Data Warehouse Ingestion
@@ -254,127 +229,17 @@ records <- make_request(
 
 ### Sandbox Mode
 
-`csiapps` includes a local sandbox that emulates the warehouse endpoints above, so
-ingestion pipelines can be developed and tested with no network access, no
-authentication, and no risk of writing test data to the production warehouse.
-Sandbox requests are routed to an in-memory warehouse that validates records
-against a registered JSON schema (using the `jsonvalidate` package) and stores
-accepted payloads locally.
+Every `make_request()` call shown above runs against a **local sandbox** by
+default, so ingestion and retrieval pipelines can be developed and tested with no
+network access, no authentication, and no risk of writing test data to the
+production warehouse. Sandbox mode is enabled by default and is turned off only
+at deployment.
 
-**Sandbox mode is enabled by default.** Every one of the `make_request()` calls
-shown earlier in this vignette runs against the local sandbox until sandbox mode
-is explicitly turned off. Every sandboxed request also prints a
-`csiapps sandbox:` message, so it is always visible that no real API call was made.
+The full sandbox workflow — enabling/disabling it, registering sport orgs and
+athletes, registering schemas, validating, ingesting, and retrieving records
+against the emulated warehouse, and inspecting or resetting sandbox state — is
+documented in its own article:
 
-To turn sandbox mode off — for example, when deploying a finished app to
-production — set the R option to `FALSE`, or the `CSIAPPS_ENV` environment
-variable to `"production"`:
+**→ [Sandbox Mode](sandbox.html)**
 
-```{r}
-options(csiapps.sandbox = FALSE) # route requests to the production warehouse
-```
-
-The `sandbox` argument of `make_request()` can also override the global setting
-for an individual call, e.g. `make_request(..., sandbox = FALSE)`.
-
-#### Best Practices
-
-Follow these two practices so that apps transition cleanly from sandbox to
-production:
-
-1.  **Do not set the `csiapps.sandbox` option (or the `sandbox` argument) in your
-    app code.** Rely on the default. Because sandbox mode is on by default, your
-    app runs safely in the sandbox during development without any configuration.
-    Hard-coding `options(csiapps.sandbox = TRUE)` in committed code would override
-    the deployer's attempt to turn sandbox off, causing the deployed app to
-    silently serve sandbox data.
-
-2.  **Turn sandbox off only at deployment, in a location the deployer controls.**
-    Sandbox mode should be disabled when the finished app is deployed — typically
-    by setting `options(csiapps.sandbox = FALSE)` in the app's `global.R` (or an
-    `Rprofile.site`) at deployment time, or by setting `CSIAPPS_ENV=production` in
-    the production environment. Keeping this out of your app code means the same
-    code runs in the sandbox during development and against production once
-    deployed, with no edits in between.
-
-#### Registering a Data Source
-
-The sandbox needs a schema to validate against. Register one under any
-identifying string — a real production uuid is not required:
-
-```{r}
-register_sandbox_schema("dummy-1234", "path/to/schema.json")
-```
-
-The schema may be an R list, a JSON string, or a path to a JSON file.
-
-#### The Sandbox Workflow
-
-From here, the workflow is *identical* to the production examples above — the
-same `make_request()` calls, with the dummy uuid in place of `Sys.getenv("SOURCE_UUID")`:
-
-```{r}
-# Retrieve the registered schema
-data_source <- make_request(
-  endpoint = paste0("api/warehouse/data-sources/", "dummy-1234")
-)
-schema <- data_source$head_primary_definition$schema
-
-# Ingest records (validated against the schema before acceptance)
-result <- make_request(
-  endpoint = "api/warehouse/ingestion/primary/",
-  method = "POST",
-  body = list(
-    source = "dummy-1234",
-    records = records,
-    subject_field = "id"
-  )
-)
-
-# Retrieve ingested records
-records <- make_request(
-  endpoint = "api/warehouse/data-records",
-  query = list(source_uuid = "dummy-1234"),
-  paginate = TRUE
-)
-```
-
-Records that fail schema validation are rejected with an error describing
-exactly which records failed and why. When code is ready for production,
-disable sandbox mode and swap in the real source uuid — no other changes are
-needed.
-
-#### Inspecting and Resetting the Sandbox
-
-Accepted payloads are written as pretty-printed JSON files, one folder per data
-source, so the exact JSON that would have been sent to the API can be inspected:
-
-```{r}
-browse_sandbox("dummy-1234") # opens the payload folder in the file explorer
-```
-
-To reset state between tests, clear a single source or the entire sandbox:
-
-```{r}
-clear_sandbox("dummy-1234") # clear one source
-clear_sandbox()             # clear everything
-```
-
-#### Limitations
-
-The sandbox faithfully simulates the *schema contract*, not the warehouse.
-Anything that depends on server-side state will differ from production:
-
--   **Validation parity is approximate.** The sandbox validates records against
-    the JSON Schema only. The real server additionally enforces things the
-    schema cannot express: duplicate handling against existing data and token
-    permissions. Passing sandbox validation is a *necessary but not sufficient*
-    condition for production acceptance.
--   **`subject` linkage is emulated only for registered athletes.** On retrieval
-    the sandbox resolves each record's `subject_field` value against athletes
-    created with `create_profile()`, returning the matched athlete (id, name,
-    sport) — or `NULL` if none is registered. Resolution happens at read time, so
-    athletes registered after ingestion backfill. Production would reject an
-    unresolved subject; the sandbox accepts it silently.
-
-See `?"csiapps-sandbox"` for full details.
+See also `?"csiapps-sandbox"` for the reference-level overview.

@@ -1,0 +1,541 @@
+# Sandbox Mode
+
+``` r
+
+library(csiapps)
+```
+
+## What sandbox mode is
+
+`csiapps` ships with a **local sandbox** that emulates the CSIAPPS data
+warehouse and registration API entirely on your machine — no network
+access, no authentication, and no risk of writing test data to
+production. It lets you run the full **schema → validate → ingest →
+retrieve** warehouse workflow, plus the **register orgs → register
+athletes → fetch profiles** registration workflow, using the *same*
+function calls your production app will use.
+
+**Sandbox mode is enabled by default.** This is deliberate: development
+work never reaches the production warehouse by accident. Every request
+is routed to a local, in-memory warehouse instead of the REST API, and
+every sandboxed call prints a `csiapps sandbox:` message so it is always
+visible that no real API call was made. When your app is ready, you
+disable sandbox mode at deployment time — with no changes to your app
+code.
+
+This article walks through sandbox mode from start to finish. If you are
+looking for the production REST API semantics, see the [CSIAPPS REST
+API](https://csiontario.github.io/csiapps/articles/api.md) article; for
+wrapping a Shiny app, see [Developing Shiny Web
+Applications](https://csiontario.github.io/csiapps/articles/csiapps.md).
+
+### What is real and what is dummy
+
+Sandbox mode is careful about the one thing it cannot fake safely — your
+identity — versus everything else, which is dummy:
+
+| Concern | In sandbox mode |
+|----|----|
+| **Login / `/me` identity** | Emulated using your real `CSIAPPS_ACCESS_TOKEN`. The token is used *only* to load `/me`, so a wrapped app’s header shows your real name. |
+| **Sport organizations** | Dummy. Created locally with [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md). |
+| **Athlete profiles** | Dummy. Created locally with [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md) (names drawn from the `babynames` dataset). |
+| **Warehouse schemas & records** | Dummy. Registered and ingested into an in-memory warehouse; nothing leaves your machine. |
+
+No real client data is ever read except your own `/me` identity.
+
+## Enabling and disabling sandbox mode
+
+[`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md)
+reports whether sandbox mode is currently on, and it supplies the
+default for the `sandbox` argument of every sandbox-aware function.
+
+``` r
+
+is_sandbox_mode() # TRUE by default
+```
+
+The resolution order is:
+
+1.  The **`csiapps.sandbox` R option**, if set, always wins.
+2.  Otherwise, the **`CSIAPPS_ENV`** environment variable — only the
+    exact value `"production"` disables the sandbox.
+3.  Otherwise, sandbox mode is **on**.
+
+``` r
+
+# Turn sandbox OFF (route to the production warehouse)
+options(csiapps.sandbox = FALSE)   # ...or set CSIAPPS_ENV=production
+
+# Turn sandbox back ON / restore the default
+options(csiapps.sandbox = NULL)
+```
+
+You can also override the global setting for a **single call** using the
+`sandbox` argument, which every relevant function accepts. This is handy
+when you want one real lookup while otherwise developing in the sandbox:
+
+``` r
+
+# One real org lookup while the sandbox is otherwise on
+orgs <- fetch_org_options(sandbox = FALSE)
+```
+
+### Best practices for the sandbox → production transition
+
+Follow these two rules so apps move cleanly from development to
+deployment:
+
+1.  **Do not set the `csiapps.sandbox` option (or the `sandbox`
+    argument) in your app code.** Rely on the default. Because sandbox
+    mode is on by default, your app runs safely in the sandbox during
+    development with no configuration. Hard-coding
+    `options(csiapps.sandbox = TRUE)` in committed code would override
+    the deployer’s attempt to turn the sandbox off, causing a deployed
+    app to silently serve sandbox data.
+
+2.  **Turn sandbox off only at deployment, in a location the deployer
+    controls** — typically `options(csiapps.sandbox = FALSE)` in the
+    app’s `global.R` (or an `Rprofile.site`), or by setting
+    `CSIAPPS_ENV=production` in the production environment. Keeping this
+    out of your app code means the same code runs in the sandbox during
+    development and against production once deployed, with no edits in
+    between.
+
+## Running a wrapped Shiny app in the sandbox
+
+Sandbox mode also lets a wrapped Shiny app (see
+[`ui_wrapper()`](https://csiontario.github.io/csiapps/reference/ui_wrapper.md),
+[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md))
+run locally **without** the OAuth2 redirect. The redirect exists only to
+obtain an access token, and it requires client credentials that cannot
+be safely distributed — so in sandbox mode
+[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
+**simulates the login** instead: it seeds the session from the
+`CSIAPPS_ACCESS_TOKEN` you already have and hands it to the same code
+path a production login would use.
+
+``` r
+
+Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
+
+set_institute("csiontario") # must match the institute that issued the token
+check_secrets()             # reports whether a token was found (never errors in sandbox)
+```
+
+With a token set, the app’s header loads your **real** identity from
+`/me`, exactly as after a production login. Because `/me` is the *only*
+real call, you must
+[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+to match the institute that issued the token, or the lookup is rejected.
+
+If **no** token is set, the app shell still renders but shows an
+unauthenticated notice prompting you to set a read-only
+`CSIAPPS_ACCESS_TOKEN`. In sandbox mode
+[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
+never errors on the (unneeded) OAuth secrets — it simply reports whether
+a token was found.
+
+## The registration workflow
+
+In sandbox mode the registration helpers —
+[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md),
+and
+[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+— read from a **local dummy registry** instead of the network. You seed
+that registry with
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+and
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+and the fetch helpers then return dummy data in the same shape the real
+API uses, so dashboards can be built and tested without a live
+connection.
+
+### 1. Register sport organizations
+
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+registers a dummy sport org. Its `name` becomes the `sport$name` of
+every athlete you later create under it. If you omit `id`, an unused
+3-digit id is generated; otherwise you may pin a specific id.
+
+``` r
+
+# Auto-generated id
+org <- create_sport_org("Rowing Canada")
+org$id
+
+# ...or pin a specific id
+create_sport_org("Athletics Canada", id = 42L)
+```
+
+Ids must be unique within the sandbox; reusing one raises an error.
+Calling
+[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+outside sandbox mode warns and has no effect (dummy orgs are only read
+by the sandbox helpers).
+
+### 2. Register athletes under a sport org
+
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+generates `n` random athlete profiles and registers them under an
+**existing** sport org. Each profile is production-shaped (a `person`
+sub-list, a `sport` link, status fields, and so on), so downstream code
+sees the same structure the real API returns.
+
+``` r
+
+# 5 athletes with unique random names drawn from `babynames`
+create_profile(5, org$id)
+
+# ...or supply explicit names (provide both vectors, or neither)
+create_profile(
+  2, org$id,
+  first_names = c("Ada", "Blair"),
+  last_names  = c("Nkemelu", "Okafor")
+)
+```
+
+The org must already exist —
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+errors if `sport_org_id` is unknown. Profiles are appended to any
+already registered, and each athlete’s `sport$id` is the `sport_org_id`,
+which is the field the `sport_org_id` filter matches against in
+`fetch_profiles`.
+
+### 3. Fetch orgs and athlete profiles
+
+Once the registry is seeded, the same fetch helpers your production app
+uses read it back.
+[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+returns `label`/`value` pairs ready for a Shiny
+[`selectInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html):
+
+``` r
+
+fetch_org_options()   # list(list(label = "Rowing Canada", value = 123L), ...)
+```
+
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+returns all registered athletes, optionally filtered by organisation.
+**Only the `sport_org_id` filter is honoured in the sandbox**; other
+filters are ignored.
+
+``` r
+
+# All dummy athletes
+profiles <- fetch_profiles()
+
+# Athletes for one organisation
+profiles <- fetch_profiles(filters = list(sport_org_id = org$id))
+```
+
+A common pattern is flattening the profile list into a data frame for
+display:
+
+``` r
+
+profile_df <- do.call(rbind, lapply(profiles, function(p) {
+  data.frame(
+    id         = p$id,
+    first_name = p$person$first_name %||% NA_character_,
+    last_name  = p$person$last_name  %||% NA_character_,
+    email      = p$person$email      %||% NA_character_
+  )
+}))
+```
+
+[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+retrieves a single athlete by id, returning `NULL` if no such id is
+registered:
+
+``` r
+
+profile <- fetch_profile(1L)
+profile$person$first_name
+```
+
+With nothing registered,
+[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+and
+[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+return [`list()`](https://rdrr.io/r/base/list.html) and
+[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+returns `NULL`.
+
+> **Note:** Only the warehouse endpoints are routed through
+> [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+> Calling `make_request("api/registration/...")` in the sandbox raises a
+> 501 — use the `fetch_*` helpers above, which read the dummy registry
+> instead.
+
+## The data warehouse workflow
+
+The sandbox emulates three warehouse endpoints through the ordinary
+[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+interface, validating records against a registered JSON schema and
+storing accepted payloads locally:
+
+- `GET api/warehouse/data-sources/{uuid}` — returns a registered schema.
+- `POST api/warehouse/ingestion/primary/` — validates and stores
+  records.
+- `GET api/warehouse/data-records` — returns previously ingested
+  records.
+
+### 1. Register a data source (schema)
+
+> **You never handle the real data source uuid.** In production, a
+> CSIAPPS insider provisions the remote warehouse and establishes the
+> source uuid for your app, supplying it through the `SOURCE_UUID`
+> environment variable. Your app code should therefore reference the
+> source **only** as `Sys.getenv("SOURCE_UUID")` — never a hard-coded
+> uuid — so the same code runs unchanged in development and in
+> production. During development you set `SOURCE_UUID` yourself to any
+> throwaway placeholder; its exact value is irrelevant to the sandbox.
+
+Set a placeholder for development and register a schema under it. The
+sandbox accepts any identifying string as the source — a real production
+uuid is **not** required. The schema may be an R list, a JSON string, or
+a path to a JSON file.
+
+``` r
+
+Sys.setenv(SOURCE_UUID = "dev-placeholder") # dev only; CSIAPPS sets this in production
+
+schema <- '{
+  "title": "A registration form",
+  "type": "object",
+  "required": ["id", "firstName", "lastName"],
+  "properties": {
+    "id":        {"type": "string",  "title": "ID"},
+    "firstName": {"type": "string",  "title": "First name"},
+    "lastName":  {"type": "string",  "title": "Last name"},
+    "age":       {"type": "integer", "title": "Age"},
+    "telephone": {"type": "string",  "title": "Telephone", "minLength": 10}
+  }
+}'
+
+register_sandbox_schema(Sys.getenv("SOURCE_UUID"), schema)
+```
+
+Here `id` is the field that uniquely assigns each record to a subject.
+You can retrieve the registered schema back through the same call
+production uses — it is nested under `head_primary_definition$schema`,
+exactly like the real API:
+
+``` r
+
+data_source <- make_request(
+  endpoint = paste0("api/warehouse/data-sources/", Sys.getenv("SOURCE_UUID"))
+)
+schema <- data_source$head_primary_definition$schema
+```
+
+### 2. Prepare and validate records
+
+Records must comply with the schema. The sandbox validates them
+automatically at ingestion, but you can validate up front with the same
+`jsonvalidate` / `jsonlite` pattern the production pipeline uses. Be
+sure to set `auto_unbox = TRUE` when serializing:
+
+``` r
+
+records <- list(
+  list(id = "xxxx", firstName = "John", lastName = "Doe",   age = 30, telephone = "1234567890"),
+  list(id = "yyyy", firstName = "Jane", lastName = "Smith", age = 25, telephone = "0987654321")
+)
+
+json_schema <- jsonvalidate::json_schema$new(jsonlite::toJSON(schema, auto_unbox = TRUE))
+
+validate_record <- function(record) {
+  json_schema$validate(jsonlite::toJSON(record, auto_unbox = TRUE))
+}
+
+stopifnot(all(sapply(records, validate_record)))
+```
+
+### 3. Ingest records into the warehouse
+
+Ingestion is a `POST` to the ingestion endpoint. The sandbox validates
+every record against the registered schema before accepting it, stores
+accepted payloads in memory, and writes a JSON copy to disk for
+inspection. Supply the `source` (the same `Sys.getenv("SOURCE_UUID")`
+your production app uses), the `records`, and optionally the
+`subject_field` that links each record to an athlete.
+
+``` r
+
+result <- make_request(
+  endpoint = "api/warehouse/ingestion/primary/",
+  method   = "POST",
+  body = list(
+    source        = Sys.getenv("SOURCE_UUID"),
+    records       = records,
+    subject_field = "id"
+  )
+)
+```
+
+Records that fail schema validation are **rejected** with an error
+naming exactly which records failed and why — so you exercise the same
+failure handling you would in production:
+
+``` r
+
+# Missing the required `id` field -> rejected before anything is stored
+bad <- list(list(firstName = "No", lastName = "Id"))
+make_request(
+  endpoint = "api/warehouse/ingestion/primary/",
+  method   = "POST",
+  body     = list(source = Sys.getenv("SOURCE_UUID"), records = bad, subject_field = "id")
+)
+#> Error: ... validation failed for record(s) 1 ...
+```
+
+### 4. Pull records back from the warehouse
+
+Retrieval is a `GET` on the data-records endpoint. The only required
+query parameter is `source_uuid`; set `paginate = TRUE` to return all
+matching records (the sandbox returns a single page, mirroring the
+paginated shape).
+
+``` r
+
+records <- make_request(
+  endpoint = "api/warehouse/data-records",
+  query    = list(source_uuid = Sys.getenv("SOURCE_UUID")),
+  paginate = TRUE
+)
+```
+
+Each returned record is wrapped in the same envelope the real API uses
+(`id`, `dataset_uuid`, `data`, `subject`, `created_at`, `updated_at`).
+If a record’s `subject_field` value matches an athlete registered with
+[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+the sandbox resolves the `subject` to that athlete (id, name, sport);
+otherwise `subject` is `NULL`. Resolution happens at **read time**, so
+athletes registered *after* ingestion backfill on the next read.
+
+## Inspecting and resetting the sandbox
+
+Accepted payloads are written as pretty-printed JSON, one folder per
+data source, so you can inspect the exact JSON that would have been sent
+to the API:
+
+``` r
+
+browse_sandbox(Sys.getenv("SOURCE_UUID")) # opens the payload folder in the file explorer
+browse_sandbox()                          # opens the sandbox root
+```
+
+To reset state between tests, clear a single source or the entire
+sandbox. This also removes the on-disk payload files, and is convenient
+as test teardown:
+
+``` r
+
+clear_sandbox(Sys.getenv("SOURCE_UUID")) # clear one source
+clear_sandbox()                          # clear everything (schemas, records, orgs, profiles)
+```
+
+Sandbox state lasts only for the R session.
+
+## A complete end-to-end example
+
+Putting it all together — registration and warehouse workflows in one
+script, all local, no network:
+
+``` r
+
+library(csiapps)
+
+# 1. (Optional) simulate login for a wrapped app's /me header
+Sys.setenv(CSIAPPS_ACCESS_TOKEN = "your-dev-access-token")
+set_institute("csiontario")
+check_secrets()
+
+# 2. Point the app at a placeholder source (CSIAPPS sets the real one in production)
+Sys.setenv(SOURCE_UUID = "dev-placeholder")
+
+# 3. Seed the registration registry
+org <- create_sport_org("Rowing Canada")
+create_profile(3, org$id, first_names = c("Ada", "Blair", "Cai"),
+                          last_names  = c("Nkemelu", "Okafor", "Zhang"))
+
+# 4. Read it back like production
+orgs     <- fetch_org_options()
+athletes <- fetch_profiles(filters = list(sport_org_id = org$id))
+
+# 5. Register a warehouse schema and ingest records keyed to those athletes
+register_sandbox_schema(Sys.getenv("SOURCE_UUID"), '{
+  "type": "object",
+  "required": ["athlete_id", "weight"],
+  "properties": {
+    "athlete_id": {"type": "integer"},
+    "weight":     {"type": "number"}
+  }
+}')
+
+make_request(
+  endpoint = "api/warehouse/ingestion/primary/",
+  method   = "POST",
+  body = list(
+    source        = Sys.getenv("SOURCE_UUID"),
+    records       = list(
+      list(athlete_id = athletes[[1]]$id, weight = 72.5),
+      list(athlete_id = athletes[[2]]$id, weight = 68.1)
+    ),
+    subject_field = "athlete_id"
+  )
+)
+
+# 6. Pull the records back; subjects resolve to the registered athletes
+make_request(
+  endpoint = "api/warehouse/data-records",
+  query    = list(source_uuid = Sys.getenv("SOURCE_UUID")),
+  paginate = TRUE
+)
+
+# 7. Reset when done
+clear_sandbox()
+```
+
+When this code is deployed, disable sandbox mode and let the CSIAPPS
+team set `SOURCE_UUID` to the real warehouse uuid they provision — the
+app code above is **unchanged**. The developer never handles the real
+uuid, and the schema registration in step 5 is development-only
+scaffolding: in production the schema already lives in the remote
+warehouse.
+
+## Limitations
+
+The sandbox faithfully simulates the *schema contract*, not the
+warehouse. Anything that depends on server-side state will differ from
+production:
+
+- **Validation parity is approximate.** The sandbox validates records
+  against the JSON Schema only (with Ajv, via `jsonvalidate`), catching
+  the most common failures: missing required fields, wrong types, length
+  and pattern violations. The real server additionally enforces things
+  the schema cannot express — `subject_field` resolution against
+  registered profiles, duplicate and dataset handling against existing
+  data, and token permissions — and validators may differ on edge cases
+  (e.g. `format` enforcement). Passing sandbox validation is therefore a
+  *necessary but not sufficient* condition for production acceptance; do
+  not treat a green sandbox run as a guarantee.
+
+- **`subject` linkage is emulated only for registered athletes.** On
+  retrieval the sandbox resolves each record’s `subject_field` value
+  against athletes created with
+  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+  returning the matched athlete — or `NULL` if none is registered.
+  Production would reject an unresolved subject; the sandbox accepts it
+  silently.
+
+- **Only warehouse endpoints go through
+  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).**
+  Registration endpoints raise a 501; use the `fetch_*` helpers, which
+  read the dummy registry. Any other endpoint is unsupported.
+
+See
+[`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+for the full reference.

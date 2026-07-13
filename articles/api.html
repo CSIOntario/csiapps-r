@@ -40,6 +40,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/api.html">CSIAPPS REST API</a></li>
+    <li><a class="dropdown-item" href="../articles/sandbox.html">Sandbox Mode</a></li>
   </ul>
 </li>
       </ul>
@@ -97,8 +98,11 @@ endpoints using <code>csiapps</code>.</p>
 <strong>sandbox mode</strong>, so the <code><a href="../reference/make_request.html">make_request()</a></code> calls
 below are routed to a local, in-memory warehouse rather than the
 production API. This lets you develop and test safely without touching
-production data. See <a href="#sandbox-mode">Sandbox Mode</a> below for
-how it works and how it is turned off for deployment.</p>
+production data. This article documents the <strong>production</strong>
+REST API semantics; for the full local workflow — registering orgs and
+athletes, schemas, ingestion, and retrieval against the emulated
+warehouse — see the dedicated <a href="sandbox.html">Sandbox Mode</a>
+article.</p>
 </blockquote>
 </div>
 <div class="section level3">
@@ -121,15 +125,13 @@ your institute before authenticating.</p>
 <div class="section level3">
 <h3 id="registration-api">Registration API<a class="anchor" aria-label="anchor" href="#registration-api"></a>
 </h3>
-<p>The registration API provides access to profiles and organisations.
-In sandbox mode (the default) these functions read from a <strong>local
-dummy registry</strong> instead of the network: seed it with
-<code><a href="../reference/create_sport_org.html">create_sport_org()</a></code> and <code><a href="../reference/create_profile.html">create_profile()</a></code>, and
-<code><a href="../reference/fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="../reference/fetch_profiles.html">fetch_profiles()</a></code> /
-<code><a href="../reference/fetch_profile.html">fetch_profile()</a></code> return that dummy data in the same shape
-the real API uses, so dashboards can be built and tested without a live
-connection. Pass <code>sandbox = FALSE</code> to contact the
-<strong>real</strong> registration API instead.</p>
+<p>The registration API provides access to profiles and organisations
+via <code><a href="../reference/fetch_org_options.html">fetch_org_options()</a></code>, <code><a href="../reference/fetch_profiles.html">fetch_profiles()</a></code>, and
+<code><a href="../reference/fetch_profile.html">fetch_profile()</a></code>. The examples below pass
+<code>sandbox = FALSE</code> to contact the <strong>real</strong>
+registration API. In sandbox mode (the default) these same helpers read
+from a local dummy registry — see the <a href="sandbox.html">Sandbox
+Mode</a> article for that workflow.</p>
 <div class="section level4">
 <h4 id="organisations">Organisations<a class="anchor" aria-label="anchor" href="#organisations"></a>
 </h4>
@@ -172,30 +174,6 @@ into a data frame for display or matching:</p>
 <code class="sourceCode R"><span><span class="va">profile</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_profile.html">fetch_profile</a></span><span class="op">(</span>profile_id <span class="op">=</span> <span class="fl">123L</span>, sandbox <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="va">profile</span><span class="op">$</span><span class="va">person</span><span class="op">$</span><span class="va">first_name</span></span></code></pre></div>
 </div>
-<div class="section level4">
-<h4 id="sandbox-behaviour">Sandbox behaviour<a class="anchor" aria-label="anchor" href="#sandbox-behaviour"></a>
-</h4>
-<p>In sandbox mode the three functions read whatever you have registered
-locally with <code><a href="../reference/create_sport_org.html">create_sport_org()</a></code> and
-<code><a href="../reference/create_profile.html">create_profile()</a></code>:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/create_sport_org.html">create_sport_org</a></span><span class="op">(</span><span class="st">"Rowing Canada"</span>, id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/create_profile.html">create_profile</a></span><span class="op">(</span><span class="fl">3</span>, sport_org_id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span>  <span class="co"># 3 unique athletes, names from babynames</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/fetch_org_options.html">fetch_org_options</a></span><span class="op">(</span><span class="op">)</span>                                 <span class="co"># the dummy orgs</span></span>
-<span><span class="fu"><a href="../reference/fetch_profiles.html">fetch_profiles</a></span><span class="op">(</span>filters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sport_org_id <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span><span class="op">)</span>  <span class="co"># the dummy athletes</span></span>
-<span><span class="fu"><a href="../reference/fetch_profile.html">fetch_profile</a></span><span class="op">(</span><span class="fl">1L</span><span class="op">)</span>                                   <span class="co"># one dummy athlete, or NULL</span></span></code></pre></div>
-<p>Only the <code>sport_org_id</code> filter is honoured in sandbox;
-other filters are ignored. With nothing registered,
-<code><a href="../reference/fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="../reference/fetch_profiles.html">fetch_profiles()</a></code> return
-<code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> and <code><a href="../reference/fetch_profile.html">fetch_profile()</a></code> returns
-<code>NULL</code>. To fetch real data during development without turning
-sandbox off globally, pass <code>sandbox = FALSE</code> to an individual
-call:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># One real lookup while sandbox is otherwise on</span></span>
-<span><span class="va">orgs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_org_options.html">fetch_org_options</a></span><span class="op">(</span>sandbox <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-</div>
 </div>
 <div class="section level3">
 <h3 id="data-warehouse-ingestion">Data Warehouse Ingestion<a class="anchor" aria-label="anchor" href="#data-warehouse-ingestion"></a>
@@ -207,50 +185,59 @@ source</em>, a list of <code>records</code> to be ingested, and
 (optionally) the <code>subject_field</code> by which each record can be
 uniquely assigned to a user. The records must comply with the schema
 defined for the target data source.</p>
+<blockquote>
+<p><strong>Note:</strong> The <code>source</code> uuid is provisioned by
+the CSIAPPS team when they set up the remote data warehouse for your
+app, and supplied through the <code>SOURCE_UUID</code> environment
+variable — the app developer does not choose or hard-code it. Read it as
+<code>Sys.getenv("SOURCE_UUID")</code> (as below) so the same code runs
+in development and production. See the <a href="sandbox.html">Sandbox
+Mode</a> article for how this works during local development.</p>
+</blockquote>
 <div class="section level4">
 <h4 id="json-schema-definition">JSON Schema Definition<a class="anchor" aria-label="anchor" href="#json-schema-definition"></a>
 </h4>
 <p>Consider the following <a href="https://json-schema.org/learn" target="_blank" class="external-link">JSON Schema</a>:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"A registration form"</span><span class="fu">,</span></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"A simple form example."</span><span class="fu">,</span></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"object"</span><span class="fu">,</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="dt">"required"</span><span class="fu">:</span> <span class="ot">[</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>    <span class="st">"id"</span><span class="ot">,</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>    <span class="st">"firstName"</span><span class="ot">,</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>    <span class="st">"lastName"</span></span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="dt">"properties"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>    <span class="dt">"id"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"ID"</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    <span class="dt">"firstName"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"First name"</span><span class="fu">,</span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>      <span class="dt">"default"</span><span class="fu">:</span> <span class="st">"Chuck"</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>    <span class="dt">"lastName"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Last name"</span><span class="fu">,</span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>      <span class="dt">"default"</span><span class="fu">:</span> <span class="st">"Norris"</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>    <span class="dt">"age"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"integer"</span><span class="fu">,</span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Age"</span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>    <span class="fu">},</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>    <span class="dt">"telephone"</span><span class="fu">:</span> <span class="fu">{</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Telephone"</span><span class="fu">,</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a>      <span class="dt">"minLength"</span><span class="fu">:</span> <span class="dv">10</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a>    <span class="fu">}</span></span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a>  <span class="fu">}</span></span>
-<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"A registration form"</span><span class="fu">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"A simple form example."</span><span class="fu">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"object"</span><span class="fu">,</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="dt">"required"</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>    <span class="st">"id"</span><span class="ot">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>    <span class="st">"firstName"</span><span class="ot">,</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>    <span class="st">"lastName"</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="dt">"properties"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>    <span class="dt">"id"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"ID"</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>    <span class="dt">"firstName"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"First name"</span><span class="fu">,</span></span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>      <span class="dt">"default"</span><span class="fu">:</span> <span class="st">"Chuck"</span></span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>    <span class="dt">"lastName"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Last name"</span><span class="fu">,</span></span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>      <span class="dt">"default"</span><span class="fu">:</span> <span class="st">"Norris"</span></span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>    <span class="dt">"age"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"integer"</span><span class="fu">,</span></span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Age"</span></span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>    <span class="dt">"telephone"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>      <span class="dt">"type"</span><span class="fu">:</span> <span class="st">"string"</span><span class="fu">,</span></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a>      <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"Telephone"</span><span class="fu">,</span></span>
+<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>      <span class="dt">"minLength"</span><span class="fu">:</span> <span class="dv">10</span></span>
+<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
 <p>Here, <code>id</code> is the required field that serves as the unique
 user assignment for each record.</p>
 <p>To create records that comply with this schema, we create the
 following records:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"xxxx"</span>, firstName <span class="op">=</span> <span class="st">"John"</span>, lastName <span class="op">=</span> <span class="st">"Doe"</span>, age <span class="op">=</span> <span class="fl">30</span>, telephone <span class="op">=</span> <span class="st">"1234567890"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>id <span class="op">=</span> <span class="st">"yyyy"</span>, firstName <span class="op">=</span> <span class="st">"Jane"</span>, lastName <span class="op">=</span> <span class="st">"Smith"</span>, age <span class="op">=</span> <span class="fl">25</span>, telephone <span class="op">=</span> <span class="st">"0987654321"</span><span class="op">)</span></span>
@@ -261,7 +248,7 @@ can make a request to the
 <code>uuid</code> is the uuid of the target data source. The schema
 definition is located in the <code>head_primary_definition$schema</code>
 field of the response.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
 <span>  endpoint <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"api/warehouse/data-sources/"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"SOURCE_UUID"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
@@ -275,7 +262,7 @@ field of the response.</p>
 <code>jsonvalidate</code> packages. Be sure to set
 <code>auto_unbox = TRUE</code> when converting the JSON objects to
 strings.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">json_schema</span> <span class="op">&lt;-</span> <span class="fu">jsonvalidate</span><span class="fu">::</span><span class="va"><a href="https://docs.ropensci.org/jsonvalidate/reference/json_schema.html" class="external-link">json_schema</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="va">schema</span>, auto_unbox <span class="op">=</span> <span class="cn">T</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">validate_record</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">record</span><span class="op">)</span> <span class="op">{</span></span>
@@ -287,7 +274,7 @@ strings.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">validation_results</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Finally, we can make the API request to ingest these records into the
 warehouse:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
 <span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/ingestion/primary/"</span>,</span>
 <span>  method <span class="op">=</span> <span class="st">"POST"</span>,</span>
@@ -308,7 +295,7 @@ required parameter is the <code>source_uuid</code> of the requested
 table, but there are several optional parameters for additional
 filtering. Note that we can set the <code>paginate = TRUE</code> to
 retrieve all records matching the query parameters.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
 <span>    endpoint <span class="op">=</span> <span class="st">"api/warehouse/data-records"</span>,</span>
 <span>    query <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>source_uuid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"SOURCE_UUID"</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -318,136 +305,19 @@ retrieve all records matching the query parameters.</p>
 <div class="section level3">
 <h3 id="sandbox-mode">Sandbox Mode<a class="anchor" aria-label="anchor" href="#sandbox-mode"></a>
 </h3>
-<p><code>csiapps</code> includes a local sandbox that emulates the
-warehouse endpoints above, so ingestion pipelines can be developed and
-tested with no network access, no authentication, and no risk of writing
-test data to the production warehouse. Sandbox requests are routed to an
-in-memory warehouse that validates records against a registered JSON
-schema (using the <code>jsonvalidate</code> package) and stores accepted
-payloads locally.</p>
-<p><strong>Sandbox mode is enabled by default.</strong> Every one of the
-<code><a href="../reference/make_request.html">make_request()</a></code> calls shown earlier in this vignette runs
-against the local sandbox until sandbox mode is explicitly turned off.
-Every sandboxed request also prints a <code>csiapps sandbox:</code>
-message, so it is always visible that no real API call was made.</p>
-<p>To turn sandbox mode off — for example, when deploying a finished app
-to production — set the R option to <code>FALSE</code>, or the
-<code>CSIAPPS_ENV</code> environment variable to
-<code>"production"</code>:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>csiapps.sandbox <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># route requests to the production warehouse</span></span></code></pre></div>
-<p>The <code>sandbox</code> argument of <code><a href="../reference/make_request.html">make_request()</a></code> can
-also override the global setting for an individual call,
-e.g. <code>make_request(..., sandbox = FALSE)</code>.</p>
-<div class="section level4">
-<h4 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
-</h4>
-<p>Follow these two practices so that apps transition cleanly from
-sandbox to production:</p>
-<ol style="list-style-type: decimal">
-<li><p><strong>Do not set the <code>csiapps.sandbox</code> option (or
-the <code>sandbox</code> argument) in your app code.</strong> Rely on
-the default. Because sandbox mode is on by default, your app runs safely
-in the sandbox during development without any configuration. Hard-coding
-<code>options(csiapps.sandbox = TRUE)</code> in committed code would
-override the deployer’s attempt to turn sandbox off, causing the
-deployed app to silently serve sandbox data.</p></li>
-<li><p><strong>Turn sandbox off only at deployment, in a location the
-deployer controls.</strong> Sandbox mode should be disabled when the
-finished app is deployed — typically by setting
-<code>options(csiapps.sandbox = FALSE)</code> in the app’s
-<code>global.R</code> (or an <code>Rprofile.site</code>) at deployment
-time, or by setting <code>CSIAPPS_ENV=production</code> in the
-production environment. Keeping this out of your app code means the same
-code runs in the sandbox during development and against production once
-deployed, with no edits in between.</p></li>
-</ol>
-</div>
-<div class="section level4">
-<h4 id="registering-a-data-source">Registering a Data Source<a class="anchor" aria-label="anchor" href="#registering-a-data-source"></a>
-</h4>
-<p>The sandbox needs a schema to validate against. Register one under
-any identifying string — a real production uuid is not required:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/register_sandbox_schema.html">register_sandbox_schema</a></span><span class="op">(</span><span class="st">"dummy-1234"</span>, <span class="st">"path/to/schema.json"</span><span class="op">)</span></span></code></pre></div>
-<p>The schema may be an R list, a JSON string, or a path to a JSON
-file.</p>
-</div>
-<div class="section level4">
-<h4 id="the-sandbox-workflow">The Sandbox Workflow<a class="anchor" aria-label="anchor" href="#the-sandbox-workflow"></a>
-</h4>
-<p>From here, the workflow is <em>identical</em> to the production
-examples above — the same <code><a href="../reference/make_request.html">make_request()</a></code> calls, with the
-dummy uuid in place of <code>Sys.getenv("SOURCE_UUID")</code>:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Retrieve the registered schema</span></span>
-<span><span class="va">data_source</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
-<span>  endpoint <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"api/warehouse/data-sources/"</span>, <span class="st">"dummy-1234"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">schema</span> <span class="op">&lt;-</span> <span class="va">data_source</span><span class="op">$</span><span class="va">head_primary_definition</span><span class="op">$</span><span class="va">schema</span></span>
-<span></span>
-<span><span class="co"># Ingest records (validated against the schema before acceptance)</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
-<span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/ingestion/primary/"</span>,</span>
-<span>  method <span class="op">=</span> <span class="st">"POST"</span>,</span>
-<span>  body <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    source <span class="op">=</span> <span class="st">"dummy-1234"</span>,</span>
-<span>    records <span class="op">=</span> <span class="va">records</span>,</span>
-<span>    subject_field <span class="op">=</span> <span class="st">"id"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Retrieve ingested records</span></span>
-<span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
-<span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/data-records"</span>,</span>
-<span>  query <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>source_uuid <span class="op">=</span> <span class="st">"dummy-1234"</span><span class="op">)</span>,</span>
-<span>  paginate <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Records that fail schema validation are rejected with an error
-describing exactly which records failed and why. When code is ready for
-production, disable sandbox mode and swap in the real source uuid — no
-other changes are needed.</p>
-</div>
-<div class="section level4">
-<h4 id="inspecting-and-resetting-the-sandbox">Inspecting and Resetting the Sandbox<a class="anchor" aria-label="anchor" href="#inspecting-and-resetting-the-sandbox"></a>
-</h4>
-<p>Accepted payloads are written as pretty-printed JSON files, one
-folder per data source, so the exact JSON that would have been sent to
-the API can be inspected:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/browse_sandbox.html">browse_sandbox</a></span><span class="op">(</span><span class="st">"dummy-1234"</span><span class="op">)</span> <span class="co"># opens the payload folder in the file explorer</span></span></code></pre></div>
-<p>To reset state between tests, clear a single source or the entire
-sandbox:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/clear_sandbox.html">clear_sandbox</a></span><span class="op">(</span><span class="st">"dummy-1234"</span><span class="op">)</span> <span class="co"># clear one source</span></span>
-<span><span class="fu"><a href="../reference/clear_sandbox.html">clear_sandbox</a></span><span class="op">(</span><span class="op">)</span>             <span class="co"># clear everything</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
-</h4>
-<p>The sandbox faithfully simulates the <em>schema contract</em>, not
-the warehouse. Anything that depends on server-side state will differ
-from production:</p>
-<ul>
-<li>
-<strong>Validation parity is approximate.</strong> The sandbox
-validates records against the JSON Schema only. The real server
-additionally enforces things the schema cannot express: duplicate
-handling against existing data and token permissions. Passing sandbox
-validation is a <em>necessary but not sufficient</em> condition for
-production acceptance.</li>
-<li>
-<strong><code>subject</code> linkage is emulated only for registered
-athletes.</strong> On retrieval the sandbox resolves each record’s
-<code>subject_field</code> value against athletes created with
-<code><a href="../reference/create_profile.html">create_profile()</a></code>, returning the matched athlete (id, name,
-sport) — or <code>NULL</code> if none is registered. Resolution happens
-at read time, so athletes registered after ingestion backfill.
-Production would reject an unresolved subject; the sandbox accepts it
-silently.</li>
-</ul>
-<p>See <code><a href="../reference/csiapps-sandbox.html">?"csiapps-sandbox"</a></code> for full details.</p>
-</div>
+<p>Every <code><a href="../reference/make_request.html">make_request()</a></code> call shown above runs against a
+<strong>local sandbox</strong> by default, so ingestion and retrieval
+pipelines can be developed and tested with no network access, no
+authentication, and no risk of writing test data to the production
+warehouse. Sandbox mode is enabled by default and is turned off only at
+deployment.</p>
+<p>The full sandbox workflow — enabling/disabling it, registering sport
+orgs and athletes, registering schemas, validating, ingesting, and
+retrieving records against the emulated warehouse, and inspecting or
+resetting sandbox state — is documented in its own article:</p>
+<p><strong>→ <a href="sandbox.html">Sandbox Mode</a></strong></p>
+<p>See also <code><a href="../reference/csiapps-sandbox.html">?"csiapps-sandbox"</a></code> for the reference-level
+overview.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

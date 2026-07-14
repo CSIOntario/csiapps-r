@@ -10,9 +10,9 @@ create_sport_org(name, id = NULL)
 \item{name}{Character. Name of the sport organization (e.g. "Rowing Canada").
 Required.}
 
-\item{id}{Integer. Optional org id. If \code{NULL} (default) an unused 3-digit id
-is generated. If supplied, it must be a positive integer that does not
-collide with an existing sandbox org.}
+\item{id}{Integer. Optional org id. If \code{NULL} (default) an unused id in
+\code{1:999} is generated. If supplied, it must be a positive integer in
+\code{1:999} that does not collide with an existing sandbox org.}
 }
 \value{
 The created org (\code{list(id, name, annual_cycle_start)}), invisibly.

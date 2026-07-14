@@ -313,9 +313,9 @@ browse_sandbox <- function(source_uuid = NULL) {
 #'
 #' @param name Character. Name of the sport organization (e.g. "Rowing Canada").
 #'   Required.
-#' @param id Integer. Optional org id. If `NULL` (default) an unused 3-digit id
-#'   is generated. If supplied, it must be a positive integer that does not
-#'   collide with an existing sandbox org.
+#' @param id Integer. Optional org id. If `NULL` (default) an unused id in
+#'   `1:999` is generated. If supplied, it must be a positive integer in
+#'   `1:999` that does not collide with an existing sandbox org.
 #'
 #' @return The created org (`list(id, name, annual_cycle_start)`), invisibly.
 #' @seealso [create_profile()] to add athletes, [csiapps-sandbox] for an overview
@@ -331,11 +331,11 @@ create_sport_org <- function(name, id = NULL) {
   stopifnot(is.character(name), length(name) == 1, nzchar(name))
   existing <- .sandbox_org_ids()
   if (is.null(id)) {
-    pool <- setdiff(100:999, existing)
-    if (length(pool) == 0) stop("create_sport_org: too many sport orgs in the sandbox. Limit is 900.", call. = FALSE)
+    pool <- setdiff(1:999, existing)
+    if (length(pool) == 0) stop("create_sport_org: too many sport orgs in the sandbox. Limit is 999.", call. = FALSE)
     id <- pool[sample.int(length(pool), 1)] #sample(pool, 1) - this behaves undesirably when pool is length 1
   } else {
-    stopifnot(is.numeric(id), length(id) == 1, is.finite(id), id == as.integer(id), id > 0)
+    stopifnot(is.numeric(id), length(id) == 1, is.finite(id), id == as.integer(id), id > 0, id <= 999)
     id <- as.integer(id)
     if (id %in% existing) {
       stop(sprintf("create_sport_org: sport org id %d already exists in the sandbox.", id), call. = FALSE)

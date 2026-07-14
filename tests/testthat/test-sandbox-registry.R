@@ -11,10 +11,10 @@ test_that("create_sport_org requires a name", {
   expect_error(suppressMessages(create_sport_org("")))
 })
 
-test_that("create_sport_org generates an unused 3-digit id when none is given", {
+test_that("create_sport_org generates an unused id in 1:999 when none is given", {
   local_clean_sandbox()
   org <- suppressMessages(create_sport_org("Rowing Canada"))
-  expect_true(org$id >= 100 && org$id <= 999)
+  expect_true(org$id >= 1 && org$id <= 999)
   expect_identical(org$name, "Rowing Canada")
 })
 
@@ -22,6 +22,14 @@ test_that("create_sport_org honours a supplied id and rejects collisions", {
   local_clean_sandbox()
   suppressMessages(create_sport_org("Swim BC", id = 321))
   expect_error(suppressMessages(create_sport_org("Swim BC", id = 321)), "already exists")
+})
+
+test_that("create_sport_org accepts any positive id up to 999 and rejects the rest", {
+  local_clean_sandbox()
+  expect_identical(suppressMessages(create_sport_org("Two digit", id = 42))$id, 42L)
+  expect_identical(suppressMessages(create_sport_org("Max", id = 999))$id, 999L)
+  expect_error(suppressMessages(create_sport_org("Too big", id = 1000)))
+  expect_error(suppressMessages(create_sport_org("Zero", id = 0)))
 })
 
 test_that("create_profile requires an existing sport org", {

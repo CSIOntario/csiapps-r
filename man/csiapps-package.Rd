@@ -20,11 +20,16 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: David Awosoga \email{dawosoga@csiontario.ca} (\href{https://orcid.org/0000-0002-2741-5770}{ORCID}) [copyright holder]
+\strong{Maintainer}: David Awosoga \email{dawosoga@csiontario.ca} (\href{https://orcid.org/0000-0002-2741-5770}{ORCID})
 
 Authors:
 \itemize{
   \item Kyu Min Shim (\href{https://orcid.org/0009-0006-4161-9813}{ORCID})
+}
+
+Other contributors:
+\itemize{
+  \item Canadian Sport Institute Ontario (CSIO) \email{info@csiontario.ca} [copyright holder]
 }
 
 }

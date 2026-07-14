@@ -7,8 +7,10 @@
 fetch_profiles(token = NULL, filters = list(), sandbox = is_sandbox_mode())
 }
 \arguments{
-\item{token}{Character. Authentication token. Defaults to the
-\code{CSIAPPS_ACCESS_TOKEN} environment variable.}
+\item{token}{Character. Authentication token. When not supplied, it is
+resolved for the current Shiny session (the token stored by
+\code{\link[=server_wrapper]{server_wrapper()}}) and otherwise falls back to the \code{CSIAPPS_ACCESS_TOKEN}
+environment variable.}
 
 \item{filters}{Named list of query parameters for filtering. Common filters
 include \code{sport_org_id} (integer, filter by organisation) and \code{sport}

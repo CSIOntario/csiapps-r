@@ -11,7 +11,7 @@ make_request(
   body = NULL,
   query = list(),
   headers = list(),
-  token = Sys.getenv("CSIAPPS_ACCESS_TOKEN"),
+  token = NULL,
   timeout = 20L,
   verbose = FALSE,
   paginate = FALSE,
@@ -45,8 +45,11 @@ make_request(
 
 - token:
 
-  Authentication token. Will attempt to read from CSIAPPS_ACCESS_TOKEN
-  environment variable if not provided explicitly.
+  Authentication token. When not provided, it is resolved for the
+  current Shiny session (the token stored by
+  [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)),
+  falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable
+  outside a session.
 
 - timeout:
 
@@ -84,7 +87,9 @@ make_request(
   `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to
   route requests to the production warehouse. See
   [csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
-  for supported endpoints and limitations.
+  for supported endpoints and limitations. In sandbox mode the HTTP-only
+  arguments (`headers`, `token`, `timeout`, `max_pages`) are ignored,
+  since no network request is made.
 
 ## Value
 

@@ -158,13 +158,15 @@ cases (e.g. <code>format</code> keyword enforcement). Passing sandbox validation
 therefore a <em>necessary but not sufficient</em> condition for production
 acceptance – do not treat a green sandbox run as a guarantee.</p></li>
 <li><p><strong><code>subject</code> linkage is emulated only for registered athletes.</strong> On
-ingestion the sandbox resolves each record's <code>subject_field</code> value against
+retrieval the sandbox resolves each record's <code>subject_field</code> value against
 athletes registered with <code><a href="create_profile.html">create_profile()</a></code> and returns the matched athlete
-(id, name, sport) in the record envelope, mirroring production. If no
-athlete matches – because none was registered or the <code>subject_field</code> value
-is mistyped – <code>subject</code> is <code>NULL</code> rather than fabricated. Production would
-reject an unresolved subject; the sandbox accepts it silently, so a green
-sandbox ingest does not guarantee the server will link every record.</p></li>
+(id, name, sport) in the record envelope, mirroring production. Resolution
+happens at read time, so athletes registered after ingestion are linked on
+the next read. If no athlete matches – because none was registered or the
+<code>subject_field</code> value is mistyped – <code>subject</code> is <code>NULL</code> rather than
+fabricated. Production would reject an unresolved subject; the sandbox
+accepts it silently, so a green sandbox ingest does not guarantee the server
+will link every record.</p></li>
 </ul></div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -6,7 +6,7 @@ authentication are set and valid
 ## Usage
 
 ``` r
-check_secrets(verbose = F, sandbox = is_sandbox_mode())
+check_secrets(verbose = FALSE, sandbox = is_sandbox_mode())
 ```
 
 ## Arguments

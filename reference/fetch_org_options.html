@@ -54,8 +54,10 @@ label/value pairs, suitable for use in Shiny selectInput() choices."><meta prope
 
 
 <dl><dt id="arg-token">token<a class="anchor" aria-label="anchor" href="#arg-token"></a></dt>
-<dd><p>Character. Authentication token. Defaults to the
-<code>CSIAPPS_ACCESS_TOKEN</code> environment variable.</p></dd>
+<dd><p>Character. Authentication token. When not supplied, it is
+resolved for the current Shiny session (the token stored by
+<code><a href="server_wrapper.html">server_wrapper()</a></code>) and otherwise falls back to the <code>CSIAPPS_ACCESS_TOKEN</code>
+environment variable.</p></dd>
 
 
 <dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>

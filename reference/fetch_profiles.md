@@ -14,8 +14,11 @@ fetch_profiles(token = NULL, filters = list(), sandbox = is_sandbox_mode())
 
 - token:
 
-  Character. Authentication token. Defaults to the
-  `CSIAPPS_ACCESS_TOKEN` environment variable.
+  Character. Authentication token. When not supplied, it is resolved for
+  the current Shiny session (the token stored by
+  [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md))
+  and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN` environment
+  variable.
 
 - filters:
 

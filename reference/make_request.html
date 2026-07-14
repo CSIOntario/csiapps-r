@@ -49,7 +49,7 @@
 <span>  body <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  query <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  headers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  token <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"CSIAPPS_ACCESS_TOKEN"</span><span class="op">)</span>,</span>
+<span>  token <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  timeout <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  paginate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -83,7 +83,7 @@
 
 
 <dt id="arg-token">token<a class="anchor" aria-label="anchor" href="#arg-token"></a></dt>
-<dd><p>Authentication token. Will attempt to read from CSIAPPS_ACCESS_TOKEN environment variable if not provided explicitly.</p></dd>
+<dd><p>Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by <code><a href="server_wrapper.html">server_wrapper()</a></code>), falling back to the <code>CSIAPPS_ACCESS_TOKEN</code> environment variable outside a session.</p></dd>
 
 
 <dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>
@@ -112,7 +112,9 @@ sandbox unless <code>sandbox = FALSE</code> (for registration reads, use
 <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>, which is <strong>TRUE by default</strong>. Disable sandbox mode
 globally with <code>options(csiapps.sandbox = FALSE)</code> (or <code>CSIAPPS_ENV=production</code>)
 to route requests to the production warehouse. See <a href="csiapps-sandbox.html">csiapps-sandbox</a> for
-supported endpoints and limitations.</p></dd>
+supported endpoints and limitations. In sandbox mode the HTTP-only arguments
+(<code>headers</code>, <code>token</code>, <code>timeout</code>, <code>max_pages</code>) are ignored, since no network
+request is made.</p></dd>
 
 </dl></div>
     <div class="section level2">

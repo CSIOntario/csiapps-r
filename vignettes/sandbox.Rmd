@@ -224,7 +224,7 @@ profile_df <- do.call(rbind, lapply(profiles, function(p) {
 id is registered:
 
 ```{r}
-profile <- fetch_profile(1L)
+profile <- fetch_profile(profile_id = 1L)
 profile$person$first_name
 ```
 
@@ -452,6 +452,172 @@ When this code is deployed, disable sandbox mode and let the CSIAPPS team set
 **unchanged**. The developer never handles the real uuid, and the schema
 registration in step 5 is development-only scaffolding: in production the schema
 already lives in the remote warehouse.
+
+## Worked example: integrating third-party vendor data
+
+A common real task is joining a **third-party vendor's** data — a testing
+platform, a wearable, a lab system — onto CSIAPPS athletes. CSI Ontario maintains
+an **AMS_mapping** data source whose records link each CSIAPPS athlete (`id`) to
+that athlete's profile in a vendor system (`vendor_profile_id`,
+`vendor_profile_name`). A consumer app reads AMS_mapping to translate the
+vendor's own ids into canonical CSIAPPS athlete ids.
+
+In production the mapping already lives in the warehouse. To build and test the
+consumer **locally**, you reproduce a miniature AMS_mapping source in the
+sandbox: create dummy athletes, author a small mapping CSV whose `id` column
+matches those dummy athletes and whose `vendor_profile_id` column matches your
+**real** vendor ids, ingest it under the AMS_mapping schema, then read it back and
+join — exactly as production will.
+
+> Steps 1–4 below (dummy athletes, schema registration, CSV ingestion) are
+> **development-only scaffolding**. In production the AMS_mapping source is
+> already populated and maintained upstream; only the read-and-join in step 5 is
+> real app code, and it ships **unchanged**.
+
+### 1. Create dummy athletes and note their ids
+
+The `id` column of your mapping must match real athlete ids. In the sandbox those
+come from `create_profile()`, which assigns ids in insertion order.
+
+A project often reads several named sources, so give each one its **own
+descriptively-named** environment variable — here `AMS_MAPPING_UUID` — rather than
+a generic `SOURCE_UUID`, so the app references each source unambiguously. As
+before, CSIAPPS sets the real value in production; you use any placeholder in
+development.
+
+```{r}
+Sys.setenv(AMS_MAPPING_UUID = "dev-ams-mapping") # CSIAPPS sets the real AMS_mapping uuid in production
+
+org <- create_sport_org("Rowing Canada")
+create_profile(3, org$id,
+               first_names = c("Ada", "Blair", "Cai"),
+               last_names  = c("Nkemelu", "Okafor", "Zhang"))
+
+athletes <- fetch_profiles(filters = list(sport_org_id = org$id))
+vapply(athletes, function(p) p$id, integer(1)) # e.g. 1 2 3 -- the ids the mapping must use
+```
+
+### 2. Author the AMS_mapping CSV
+
+The CSV bridges two id systems: `id` is the CSIAPPS athlete id (matching the dummy
+profiles above), and `vendor_profile_id` is the athlete's id in **your** vendor
+system — a real value from your data (a code, integer, or UUID). Keep every base
+mapping `active = TRUE`.
+
+```{r}
+mapping_csv <- tempfile(fileext = ".csv")
+write.csv(
+  data.frame(
+    id                  = c(1, 2, 3),                        # CSIAPPS athlete ids (dummy profiles)
+    vendor              = "VendorX",
+    vendor_profile_id   = c("VX-8841", "VX-8842", "VX-9001"), # your real vendor ids
+    vendor_profile_name = c("Ada N.", "Blair O.", "Cai Z."),
+    active              = TRUE,
+    stringsAsFactors    = FALSE
+  ),
+  mapping_csv, row.names = FALSE
+)
+```
+
+### 3. Register the AMS_mapping schema
+
+Register the AMS_mapping JSON schema under your placeholder source.
+`register_sandbox_schema()` accepts a path to the `.schema.json` file (or a JSON
+string / R list):
+
+```{r}
+register_sandbox_schema(Sys.getenv("AMS_MAPPING_UUID"), "mapping.schema.json")
+```
+
+### 4. Ingest the CSV into the sandbox warehouse
+
+Read the CSV back into records — forcing `vendor_profile_id` to stay a **string**
+(vendor id formats vary) and `active` to a logical — then ingest with
+`subject_field = "id"` so each mapping links to its CSIAPPS athlete:
+
+```{r}
+raw <- read.csv(mapping_csv,
+                colClasses       = c(vendor_profile_id = "character"),
+                stringsAsFactors = FALSE)
+raw$active <- as.logical(raw$active)
+
+records <- lapply(seq_len(nrow(raw)), function(i) list(
+  id                  = raw$id[i],
+  vendor              = raw$vendor[i],
+  vendor_profile_id   = raw$vendor_profile_id[i],
+  vendor_profile_name = raw$vendor_profile_name[i],
+  active              = raw$active[i]
+))
+
+make_request(
+  endpoint = "api/warehouse/ingestion/primary/",
+  method   = "POST",
+  body = list(
+    source        = Sys.getenv("AMS_MAPPING_UUID"),
+    records       = records,
+    subject_field = "id"
+  )
+)
+```
+
+### 5. Read the mapping back and join your vendor data
+
+This is the only part that ships to production. Pull the AMS_mapping records, keep
+the active ones, and `merge()` your real vendor data onto them by
+`vendor_profile_id` — every vendor measurement now carries a canonical CSIAPPS
+`id`, which you can enrich with `fetch_profile()`:
+
+```{r}
+resp <- make_request(
+  endpoint = "api/warehouse/data-records",
+  query    = list(source_uuid = Sys.getenv("AMS_MAPPING_UUID")),
+  paginate = TRUE
+)
+
+mapping <- do.call(rbind, lapply(resp[[1]]$results, function(r) data.frame(
+  id                = r$data$id,
+  vendor_profile_id = r$data$vendor_profile_id,
+  active            = r$data$active,
+  stringsAsFactors  = FALSE
+)))
+mapping <- mapping[mapping$active, ] # consumers keep only active mappings
+
+# your REAL third-party data, keyed by the vendor's own id
+vendor_data <- data.frame(
+  vendor_profile_id = c("VX-8841", "VX-8842", "VX-9001"),
+  resting_hr        = c(52, 58, 49),
+  stringsAsFactors  = FALSE
+)
+
+joined <- merge(vendor_data, mapping, by = "vendor_profile_id")
+joined$athlete <- vapply(joined$id, function(i) {
+  p <- fetch_profile(profile_id = i)
+  paste(p$person$first_name, p$person$last_name)
+}, character(1))
+joined # vendor_profile_id | resting_hr | id | active | athlete
+```
+
+> **The `active` flag and append-only history.** AMS_mapping is append-only: a
+> mapping is corrected or removed by appending a new record — a tombstone with
+> `active = FALSE`, plus any corrected record — and the most recent record per
+> `(id, vendor, vendor_profile_id, vendor_profile_name)` wins. In **production**
+> the warehouse returns only currently-active mappings (filtered server-side). The
+> **sandbox returns every record you ingest**, unfiltered — so if you ingest
+> corrections while testing, reduce to the latest record per identity and keep the
+> active ones yourself to mirror what production returns:
+>
+> ```{r}
+> identity <- with(mapping, paste(id, vendor_profile_id)) # add vendor + name for the full key
+> mapping  <- mapping[!duplicated(identity, fromLast = TRUE) & mapping$active, ]
+> ```
+
+### Going to production
+
+Disable sandbox mode and let CSIAPPS set `AMS_MAPPING_UUID` to the real
+AMS_mapping source uuid. Steps 1–4 fall away entirely — the real AMS_mapping source is already
+populated upstream — and the step 5 read-and-join runs **unchanged**, now
+returning server-filtered active mappings whose subjects resolve against real
+registrations.
 
 ## Limitations
 

@@ -7,8 +7,10 @@
 fetch_profile(token = NULL, profile_id, sandbox = is_sandbox_mode())
 }
 \arguments{
-\item{token}{Character. Authentication token. Defaults to the
-\code{CSIAPPS_ACCESS_TOKEN} environment variable.}
+\item{token}{Character. Authentication token. When not supplied, it is
+resolved for the current Shiny session (the token stored by
+\code{\link[=server_wrapper]{server_wrapper()}}) and otherwise falls back to the \code{CSIAPPS_ACCESS_TOKEN}
+environment variable.}
 
 \item{profile_id}{Integer or character. The ID of the profile to retrieve.}
 

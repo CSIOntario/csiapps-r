@@ -82,8 +82,9 @@ test_that("sandbox seeds the session from an existing access token", {
     session$flushReact()
     # The existing token is adopted as the "granted" token...
     expect_identical(user_token()$access_token, "dev-token-abc")
-    # ...and published to the environment for make_request()/helpers
-    expect_identical(Sys.getenv("CSIAPPS_ACCESS_TOKEN"), "dev-token-abc")
+    # ...and stored on the session (per-session, so concurrent users never
+    # share a token) for make_request()/helpers to read
+    expect_identical(session$userData$csiapps_token, "dev-token-abc")
   }))
 })
 

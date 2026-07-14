@@ -38,7 +38,7 @@ clear_token <- function() {
 #' [is_sandbox_mode()]. See [csiapps-sandbox].
 #'
 #' @export
-check_secrets <- function(verbose = F, sandbox = is_sandbox_mode()) {
+check_secrets <- function(verbose = FALSE, sandbox = is_sandbox_mode()) {
 
   if (isTRUE(sandbox)) {
     if (nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
@@ -113,8 +113,10 @@ flatten_record <- function(rec) {
 #' Returns all organisations accessible to the authenticated user as a list of
 #' `label`/`value` pairs, suitable for use in Shiny `selectInput()` choices.
 #'
-#' @param token Character. Authentication token. Defaults to the
-#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param token Character. Authentication token. When not supplied, it is
+#'   resolved for the current Shiny session (the token stored by
+#'   [server_wrapper()]) and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN`
+#'   environment variable.
 #' @param sandbox Logical. When `TRUE` (the default in development), no network
 #'   call is made and the local dummy registry is returned (the orgs registered
 #'   with [create_sport_org()]). Set to `FALSE` to fetch real organisations from
@@ -138,7 +140,7 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
     return(lapply(unname(.sandbox_env$orgs), function(o) list(label = o$name, value = o$id)))
   }
   if (is.null(token) || !nzchar(token)) {
-    token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+    token <- .current_token()
   }
   if (!nzchar(token)) {
     stop("fetch_org_options: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
@@ -187,8 +189,10 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
 #' filtering. Automatically paginates — all matching profiles are returned in a
 #' single list regardless of how many pages the API uses.
 #'
-#' @param token Character. Authentication token. Defaults to the
-#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param token Character. Authentication token. When not supplied, it is
+#'   resolved for the current Shiny session (the token stored by
+#'   [server_wrapper()]) and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN`
+#'   environment variable.
 #' @param filters Named list of query parameters for filtering. Common filters
 #'   include `sport_org_id` (integer, filter by organisation) and `sport`
 #'   (filter by sport). See the
@@ -242,7 +246,7 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
     return(profs)
   }
   if (is.null(token) || !nzchar(token)) {
-    token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+    token <- .current_token()
   }
   if (!nzchar(token)) {
     stop("fetch_profiles: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
@@ -286,8 +290,10 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
 #'
 #' Retrieves one profile by its ID.
 #'
-#' @param token Character. Authentication token. Defaults to the
-#'   `CSIAPPS_ACCESS_TOKEN` environment variable.
+#' @param token Character. Authentication token. When not supplied, it is
+#'   resolved for the current Shiny session (the token stored by
+#'   [server_wrapper()]) and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN`
+#'   environment variable.
 #' @param profile_id Integer or character. The ID of the profile to retrieve.
 #' @param sandbox Logical. When `TRUE` (the default in development), no network
 #'   call is made and the profile is looked up in the local dummy registry (those
@@ -315,14 +321,16 @@ fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode())
     return(if (length(hit)) hit[[1]] else NULL)
   }
   if (is.null(token) || !nzchar(token)) {
-    token <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+    token <- .current_token()
   }
   if (!nzchar(token)) {
     stop("fetch_profile: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
   }
 
-  path <- sprintf("%s%s", PROFILE_ENDPOINT, profile_id)  # "/api/registration/profile/{id}"
-  url  <- paste0(SITE_URL(), path)
+  # URL-encode the id so an unusual value can't alter the request path.
+  enc_id <- utils::URLencode(as.character(profile_id), reserved = TRUE)
+  path   <- sprintf("%s%s", PROFILE_ENDPOINT, enc_id)  # "/api/registration/profile/{id}"
+  url    <- paste0(SITE_URL(), path)
 
   req <- httr2::request(url) |>
     httr2::req_headers(
@@ -444,6 +452,20 @@ is_sandbox_mode <- function() {
   TRUE                                            # nothing set -> sandbox ON
 }
 
+# Resolve the access token for an API request. Inside a Shiny session the token
+# is stored per-session on `session$userData$csiapps_token` (set by
+# server_wrapper()), so concurrent users never share or clobber each other's
+# token. Outside a Shiny session (CLI, scripts) there is no reactive domain, so
+# we fall back to the process-wide CSIAPPS_ACCESS_TOKEN environment variable.
+.current_token <- function() {
+  domain <- shiny::getDefaultReactiveDomain()
+  if (!is.null(domain)) {
+    tok <- domain$userData$csiapps_token
+    if (!is.null(tok) && nzchar(tok)) return(tok)
+  }
+  Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+}
+
 #' Make an authenticated API request to CSIAPPS
 #'
 #' @param endpoint API endpoint path.
@@ -451,7 +473,7 @@ is_sandbox_mode <- function() {
 #' @param body Optional request body for POST/PUT/PATCH requests; should be an R object that can be serialized to JSON
 #' @param query Optional list of query parameters to include in the request URL
 #' @param headers Optional list of additional HTTP headers to include in the request
-#' @param token Authentication token. Will attempt to read from CSIAPPS_ACCESS_TOKEN environment variable if not provided explicitly.
+#' @param token Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by [server_wrapper()]), falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable outside a session.
 #' @param timeout Request timeout in seconds; defaults to 20
 #' @param verbose If TRUE, prints request and response details to the console for debugging purposes
 #' @param paginate If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.
@@ -465,7 +487,9 @@ is_sandbox_mode <- function() {
 #' [is_sandbox_mode()], which is **TRUE by default**. Disable sandbox mode
 #' globally with `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`)
 #' to route requests to the production warehouse. See [csiapps-sandbox] for
-#' supported endpoints and limitations.
+#' supported endpoints and limitations. In sandbox mode the HTTP-only arguments
+#' (`headers`, `token`, `timeout`, `max_pages`) are ignored, since no network
+#' request is made.
 #'
 #' @return List of parsed API responses
 #' @export
@@ -475,7 +499,7 @@ make_request <- function(
     body = NULL,
     query = list(),
     headers = list(),
-    token = Sys.getenv("CSIAPPS_ACCESS_TOKEN"),
+    token = NULL,
     timeout = 20L,
     verbose = FALSE,
     paginate = FALSE,
@@ -492,6 +516,11 @@ make_request <- function(
       paginate = paginate
     ))
   }
+
+  # Resolve the token per Shiny session (see .current_token()); the process-wide
+  # env var is only the fallback for non-Shiny use, so concurrent app users never
+  # share a token.
+  if (is.null(token) || !nzchar(token)) token <- .current_token()
 
   .make_http_request(
     endpoint  = endpoint,
@@ -513,13 +542,13 @@ make_request <- function(
     body = NULL,
     query = list(),
     headers = list(),
-    token = Sys.getenv("CSIAPPS_ACCESS_TOKEN"),
+    token = NULL,
     timeout = 20L,
     verbose = FALSE,
     paginate = FALSE,
     max_pages = 50
   ) {
-  if (!nzchar(token)) {
+  if (is.null(token) || !nzchar(token)) {
     stop("make_request: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
   }
 
@@ -569,7 +598,7 @@ make_request <- function(
     resps <- req |> httr2::req_perform_iterative(
       next_req = next_by_link,
       max_reqs = max_pages,
-      progress = F
+      progress = FALSE
     )
 
     return(lapply(resps, parse_response))

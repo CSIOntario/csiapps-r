@@ -2,9 +2,10 @@ Package: csiapps
 Title: Helper functions for CSIAPPS
 Version: 0.1.0
 Authors@R: c(
-    person("David", "Awosoga", , "dawosoga@csiontario.ca", role = c("aut", "cre", "cph"),
+    person("David", "Awosoga", , "dawosoga@csiontario.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2741-5770")),
-    person("Kyu Min","Shim", , , role = c("aut"), comment = c(ORCID = "0009-0006-4161-9813"))
+    person("Kyu Min","Shim", , , role = c("aut"), comment = c(ORCID = "0009-0006-4161-9813")),
+    person("Canadian Sport Institute Ontario (CSIO)", , email = "info@csiontario.ca", role = c("cph"))
     )
 Description: Helper functions and utilities for CSI data warehouse ingestion and shiny web applications.
 License: MIT + file LICENSE

@@ -155,8 +155,9 @@ connection.
 
 [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
 registers a dummy sport org. Its `name` becomes the `sport$name` of
-every athlete you later create under it. If you omit `id`, an unused
-3-digit id is generated; otherwise you may pin a specific id.
+every athlete you later create under it. If you omit `id`, an unused id
+in `1:999` is generated; otherwise you may pin any positive integer id
+up to and including 999.
 
 ``` r
 

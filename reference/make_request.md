@@ -71,7 +71,14 @@ make_request(
 
   If TRUE, the request is routed to the local sandbox instead of the
   real REST API: no network call is made and no authentication is
-  required. Defaults to
+  required. Only the **warehouse** endpoints are emulated; registration
+  and auth endpoints (e.g. `api/registration/...`, `api/csiauth/me/`)
+  are not, and raise a 501 in sandbox unless `sandbox = FALSE` (for
+  registration reads, use
+  [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+  /
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  instead). Defaults to
   [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md),
   which is **TRUE by default**. Disable sandbox mode globally with
   `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to

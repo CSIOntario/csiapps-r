@@ -105,8 +105,12 @@
 <dt id="arg-sandbox">sandbox<a class="anchor" aria-label="anchor" href="#arg-sandbox"></a></dt>
 <dd><p>If TRUE, the request is routed to the local sandbox instead of
 the real REST API: no network call is made and no authentication is required.
-Defaults to <code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>, which is <strong>TRUE by default</strong>. Disable sandbox
-mode globally with <code>options(csiapps.sandbox = FALSE)</code> (or <code>CSIAPPS_ENV=production</code>)
+Only the <strong>warehouse</strong> endpoints are emulated; registration and auth endpoints
+(e.g. <code>api/registration/...</code>, <code>api/csiauth/me/</code>) are not, and raise a 501 in
+sandbox unless <code>sandbox = FALSE</code> (for registration reads, use
+<code><a href="fetch_org_options.html">fetch_org_options()</a></code> / <code><a href="fetch_profiles.html">fetch_profiles()</a></code> instead). Defaults to
+<code><a href="is_sandbox_mode.html">is_sandbox_mode()</a></code>, which is <strong>TRUE by default</strong>. Disable sandbox mode
+globally with <code>options(csiapps.sandbox = FALSE)</code> (or <code>CSIAPPS_ENV=production</code>)
 to route requests to the production warehouse. See <a href="csiapps-sandbox.html">csiapps-sandbox</a> for
 supported endpoints and limitations.</p></dd>
 

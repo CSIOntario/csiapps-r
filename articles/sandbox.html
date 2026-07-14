@@ -231,8 +231,9 @@ connection.</p>
 </h3>
 <p><code><a href="../reference/create_sport_org.html">create_sport_org()</a></code> registers a dummy sport org. Its
 <code>name</code> becomes the <code>sport$name</code> of every athlete
-you later create under it. If you omit <code>id</code>, an unused
-3-digit id is generated; otherwise you may pin a specific id.</p>
+you later create under it. If you omit <code>id</code>, an unused id in
+<code>1:999</code> is generated; otherwise you may pin any positive
+integer id up to and including 999.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Auto-generated id</span></span>
 <span><span class="va">org</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/create_sport_org.html">create_sport_org</a></span><span class="op">(</span><span class="st">"Rowing Canada"</span><span class="op">)</span></span>

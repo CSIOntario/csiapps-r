@@ -22,9 +22,9 @@ create_sport_org(name, id = NULL)
 
 - id:
 
-  Integer. Optional org id. If `NULL` (default) an unused 3-digit id is
-  generated. If supplied, it must be a positive integer that does not
-  collide with an existing sandbox org.
+  Integer. Optional org id. If `NULL` (default) an unused id in `1:999`
+  is generated. If supplied, it must be a positive integer in `1:999`
+  that does not collide with an existing sandbox org.
 
 ## Value
 
@@ -41,9 +41,9 @@ for an overview
 
 ``` r
 org <- create_sport_org("Rowing Canada")
-#> csiapps sandbox: created sport org 551 ('Rowing Canada')
+#> csiapps sandbox: created sport org 452 ('Rowing Canada')
 create_profile(5, org$id)
-#> csiapps sandbox: created 5 athlete(s) under sport org 551 (5 total)
+#> csiapps sandbox: created 5 athlete(s) under sport org 452 (5 total)
 clear_sandbox()
 #> csiapps sandbox: entire sandbox cleared
 ```

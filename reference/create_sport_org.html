@@ -65,9 +65,9 @@ Required.</p></dd>
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>Integer. Optional org id. If <code>NULL</code> (default) an unused 3-digit id
-is generated. If supplied, it must be a positive integer that does not
-collide with an existing sandbox org.</p></dd>
+<dd><p>Integer. Optional org id. If <code>NULL</code> (default) an unused id in
+<code>1:999</code> is generated. If supplied, it must be a positive integer in
+<code>1:999</code> that does not collide with an existing sandbox org.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -82,9 +82,9 @@ collide with an existing sandbox org.</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">org</span> <span class="op">&lt;-</span> <span class="fu">create_sport_org</span><span class="op">(</span><span class="st">"Rowing Canada"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> csiapps sandbox: created sport org 551 ('Rowing Canada')</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> csiapps sandbox: created sport org 452 ('Rowing Canada')</span>
 <span class="r-in"><span><span class="fu"><a href="create_profile.html">create_profile</a></span><span class="op">(</span><span class="fl">5</span>, <span class="va">org</span><span class="op">$</span><span class="va">id</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> csiapps sandbox: created 5 athlete(s) under sport org 551 (5 total)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> csiapps sandbox: created 5 athlete(s) under sport org 452 (5 total)</span>
 <span class="r-in"><span><span class="fu"><a href="clear_sandbox.html">clear_sandbox</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> csiapps sandbox: entire sandbox cleared</span>
 </code></pre></div>

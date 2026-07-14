@@ -49,10 +49,10 @@ The created profiles, invisibly. Appended to any already registered.
 
 ``` r
 org <- create_sport_org("Rowing Canada")
-#> csiapps sandbox: created sport org 272 ('Rowing Canada')
+#> csiapps sandbox: created sport org 173 ('Rowing Canada')
 create_profile(2, org$id, first_names = c("Ada", "Blair"),
                last_names = c("Nkemelu", "Okafor"))
-#> csiapps sandbox: created 2 athlete(s) under sport org 272 (2 total)
+#> csiapps sandbox: created 2 athlete(s) under sport org 173 (2 total)
 clear_sandbox()
 #> csiapps sandbox: entire sandbox cleared
 ```

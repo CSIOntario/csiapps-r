@@ -2,10 +2,12 @@
 
 ## Authors
 
-- **David Awosoga**. Author, maintainer, copyright holder.
+- **David Awosoga**. Author, maintainer.
   [](https://orcid.org/0000-0002-2741-5770)
 
 - **Kyu Min Shim**. Author. [](https://orcid.org/0009-0006-4161-9813)
+
+- **Canadian Sport Institute Ontario (CSIO)**. Copyright holder.
 
 ## Citation
 

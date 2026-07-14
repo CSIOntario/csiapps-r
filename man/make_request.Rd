@@ -41,8 +41,12 @@ make_request(
 
 \item{sandbox}{If TRUE, the request is routed to the local sandbox instead of
 the real REST API: no network call is made and no authentication is required.
-Defaults to \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, which is \strong{TRUE by default}. Disable sandbox
-mode globally with \code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production})
+Only the \strong{warehouse} endpoints are emulated; registration and auth endpoints
+(e.g. \code{api/registration/...}, \verb{api/csiauth/me/}) are not, and raise a 501 in
+sandbox unless \code{sandbox = FALSE} (for registration reads, use
+\code{\link[=fetch_org_options]{fetch_org_options()}} / \code{\link[=fetch_profiles]{fetch_profiles()}} instead). Defaults to
+\code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, which is \strong{TRUE by default}. Disable sandbox mode
+globally with \code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production})
 to route requests to the production warehouse. See \link{csiapps-sandbox} for
 supported endpoints and limitations.}
 }

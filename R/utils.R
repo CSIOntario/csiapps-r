@@ -458,8 +458,12 @@ is_sandbox_mode <- function() {
 #' @param max_pages Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops
 #' @param sandbox If TRUE, the request is routed to the local sandbox instead of
 #' the real REST API: no network call is made and no authentication is required.
-#' Defaults to [is_sandbox_mode()], which is **TRUE by default**. Disable sandbox
-#' mode globally with `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`)
+#' Only the **warehouse** endpoints are emulated; registration and auth endpoints
+#' (e.g. `api/registration/...`, `api/csiauth/me/`) are not, and raise a 501 in
+#' sandbox unless `sandbox = FALSE` (for registration reads, use
+#' [fetch_org_options()] / [fetch_profiles()] instead). Defaults to
+#' [is_sandbox_mode()], which is **TRUE by default**. Disable sandbox mode
+#' globally with `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`)
 #' to route requests to the production warehouse. See [csiapps-sandbox] for
 #' supported endpoints and limitations.
 #'

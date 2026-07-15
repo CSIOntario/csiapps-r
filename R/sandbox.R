@@ -74,13 +74,15 @@
 #'   therefore a *necessary but not sufficient* condition for production
 #'   acceptance -- do not treat a green sandbox run as a guarantee.
 #' * **`subject` linkage is emulated only for registered athletes.** On
-#'   ingestion the sandbox resolves each record's `subject_field` value against
+#'   retrieval the sandbox resolves each record's `subject_field` value against
 #'   athletes registered with [create_profile()] and returns the matched athlete
-#'   (id, name, sport) in the record envelope, mirroring production. If no
-#'   athlete matches -- because none was registered or the `subject_field` value
-#'   is mistyped -- `subject` is `NULL` rather than fabricated. Production would
-#'   reject an unresolved subject; the sandbox accepts it silently, so a green
-#'   sandbox ingest does not guarantee the server will link every record.
+#'   (id, name, sport) in the record envelope, mirroring production. Resolution
+#'   happens at read time, so athletes registered after ingestion are linked on
+#'   the next read. If no athlete matches -- because none was registered or the
+#'   `subject_field` value is mistyped -- `subject` is `NULL` rather than
+#'   fabricated. Production would reject an unresolved subject; the sandbox
+#'   accepts it silently, so a green sandbox ingest does not guarantee the server
+#'   will link every record.
 #'
 #' @name csiapps-sandbox
 NULL

@@ -10,7 +10,7 @@ make_request(
   body = NULL,
   query = list(),
   headers = list(),
-  token = Sys.getenv("CSIAPPS_ACCESS_TOKEN"),
+  token = NULL,
   timeout = 20L,
   verbose = FALSE,
   paginate = FALSE,
@@ -29,7 +29,7 @@ make_request(
 
 \item{headers}{Optional list of additional HTTP headers to include in the request}
 
-\item{token}{Authentication token. Will attempt to read from CSIAPPS_ACCESS_TOKEN environment variable if not provided explicitly.}
+\item{token}{Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by \code{\link[=server_wrapper]{server_wrapper()}}), falling back to the \code{CSIAPPS_ACCESS_TOKEN} environment variable outside a session.}
 
 \item{timeout}{Request timeout in seconds; defaults to 20}
 
@@ -48,7 +48,9 @@ sandbox unless \code{sandbox = FALSE} (for registration reads, use
 \code{\link[=is_sandbox_mode]{is_sandbox_mode()}}, which is \strong{TRUE by default}. Disable sandbox mode
 globally with \code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production})
 to route requests to the production warehouse. See \link{csiapps-sandbox} for
-supported endpoints and limitations.}
+supported endpoints and limitations. In sandbox mode the HTTP-only arguments
+(\code{headers}, \code{token}, \code{timeout}, \code{max_pages}) are ignored, since no network
+request is made.}
 }
 \value{
 List of parsed API responses

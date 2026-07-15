@@ -77,13 +77,15 @@ cases (e.g. \code{format} keyword enforcement). Passing sandbox validation is
 therefore a \emph{necessary but not sufficient} condition for production
 acceptance -- do not treat a green sandbox run as a guarantee.
 \item \strong{\code{subject} linkage is emulated only for registered athletes.} On
-ingestion the sandbox resolves each record's \code{subject_field} value against
+retrieval the sandbox resolves each record's \code{subject_field} value against
 athletes registered with \code{\link[=create_profile]{create_profile()}} and returns the matched athlete
-(id, name, sport) in the record envelope, mirroring production. If no
-athlete matches -- because none was registered or the \code{subject_field} value
-is mistyped -- \code{subject} is \code{NULL} rather than fabricated. Production would
-reject an unresolved subject; the sandbox accepts it silently, so a green
-sandbox ingest does not guarantee the server will link every record.
+(id, name, sport) in the record envelope, mirroring production. Resolution
+happens at read time, so athletes registered after ingestion are linked on
+the next read. If no athlete matches -- because none was registered or the
+\code{subject_field} value is mistyped -- \code{subject} is \code{NULL} rather than
+fabricated. Production would reject an unresolved subject; the sandbox
+accepts it silently, so a green sandbox ingest does not guarantee the server
+will link every record.
 }
 }
 

@@ -4,7 +4,7 @@
 \alias{check_secrets}
 \title{Function to check that required environment variables for APPS authentication are set and valid}
 \usage{
-check_secrets(verbose = F, sandbox = is_sandbox_mode())
+check_secrets(verbose = FALSE, sandbox = is_sandbox_mode())
 }
 \arguments{
 \item{verbose}{logical; if TRUE, prints the current values of relevant environment variables (masking secrets) to the console}

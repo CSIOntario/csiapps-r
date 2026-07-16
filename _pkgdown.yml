@@ -1,6 +1,16 @@
 url: https://csiontario.github.io/csiapps/
 template:
   bootstrap: 5
+navbar:
+  structure:
+    right: [crosslang, python, search, github]
+  components:
+    crosslang:
+      text: R + Python docs
+      href: https://csiontario.github.io/csiapps-py/
+    python:
+      text: Python reference
+      href: https://csiontario.github.io/csiapps-py/api/
 reference:
 - title: Functions
 - subtitle: Shiny

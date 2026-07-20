@@ -10,6 +10,8 @@ Functions for developing Shiny web applications.
   : Wrapper UI for Shiny apps
 - [`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)
   : Wrapper server function for Shiny apps
+- [`token_ready()`](https://csiontario.github.io/csiapps-r/reference/token_ready.md)
+  : Is a CSIAPPS access token available yet?
 - [`global_wrapper()`](https://csiontario.github.io/csiapps-r/reference/global_wrapper.md)
   : Wrap Global code for Shiny apps
 - [`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md)

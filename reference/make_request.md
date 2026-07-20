@@ -49,7 +49,13 @@ make_request(
   current Shiny session (the token stored by
   [`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)),
   falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable
-  outside a session.
+  outside a session. Inside a Shiny session a not-yet-available token
+  does not error: the request is cancelled quietly with
+  [`shiny::req()`](https://rdrr.io/pkg/shiny/man/req.html), and the
+  calling reactive or observer re-runs automatically once login
+  completes (see
+  [`token_ready()`](https://csiontario.github.io/csiapps-r/reference/token_ready.md)).
+  Outside Shiny a missing token raises an error.
 
 - timeout:
 

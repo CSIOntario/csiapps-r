@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">csiapps</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -85,7 +85,7 @@
 
 
 <dt id="arg-token">token<a class="anchor" aria-label="anchor" href="#arg-token"></a></dt>
-<dd><p>Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by <code><a href="server_wrapper.html">server_wrapper()</a></code>), falling back to the <code>CSIAPPS_ACCESS_TOKEN</code> environment variable outside a session.</p></dd>
+<dd><p>Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by <code><a href="server_wrapper.html">server_wrapper()</a></code>), falling back to the <code>CSIAPPS_ACCESS_TOKEN</code> environment variable outside a session. Inside a Shiny session a not-yet-available token does not error: the request is cancelled quietly with <code><a href="https://rdrr.io/pkg/shiny/man/req.html" class="external-link">shiny::req()</a></code>, and the calling reactive or observer re-runs automatically once login completes (see <code><a href="token_ready.html">token_ready()</a></code>). Outside Shiny a missing token raises an error.</p></dd>
 
 
 <dt id="arg-timeout">timeout<a class="anchor" aria-label="anchor" href="#arg-timeout"></a></dt>

@@ -7,11 +7,13 @@ shiny web applications.
 
 Useful links:
 
-- <https://github.com/CSIOntario/csiapps>
+- <https://github.com/CSIOntario/csiapps-r>
+
+- <https://csiontario.github.io/csiapps-r/>
 
 - <https://csiontario.github.io/csiapps/>
 
-- Report bugs at <https://github.com/CSIOntario/csiapps/issues>
+- Report bugs at <https://github.com/CSIOntario/csiapps-r/issues>
 
 ## Author
 

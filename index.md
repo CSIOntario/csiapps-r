@@ -20,7 +20,7 @@ and
 for more information on how to use this library.
 
 `csiapps` is also available for Python. The [cross-language
-documentation](https://csiontario.github.io/csiapps-py/) shows R and
-Python usage side by side and includes a [parity
-checklist](https://csiontario.github.io/csiapps-py/parity/) mapping
-every function between the two.
+documentation](https://csiontario.github.io/csiapps/) shows R and Python
+usage side by side and includes a [parity
+checklist](https://csiontario.github.io/csiapps/parity/) mapping every
+function between the two.

@@ -84,6 +84,13 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
   function(input, output, session) {
 
+    # Legacy compatibility: older apps gate their reactives on
+    # nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN")), which this wrapper used to
+    # satisfy by exporting the real token process-wide. Keep those guards
+    # passing with a non-secret placeholder (never a real token); actual auth
+    # gating happens per-session inside make_request()/token_ready().
+    if (!isTRUE(sandbox)) .seed_env_placeholder()
+
     user_token <- reactiveVal(NULL)
     userinfo   <- reactiveVal(NULL)
 
@@ -111,7 +118,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         if (!is.null(err)) {
           #message("AUTH ERROR from provider: ", err, " - ", err_desc)
           user_token(list(error = err, error_description = err_desc))
-          session$userData$csiapps_token <- NULL
+          .set_session_token(session, NULL)
           shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
           #return()
         }
@@ -168,7 +175,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       tok <- user_token()
 
       # Clear any old token
-      session$userData$csiapps_token <- NULL
+      .set_session_token(session, NULL)
 
       # Bail if token exchange failed
       if (is.null(tok) || !is.null(tok$error)) {
@@ -180,9 +187,10 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
       if (is.null(access_token) || !nzchar(access_token)) return()
 
-      # 1) Store the token on the session so make_request()/helpers read it
-      #    per-session (never a process-global env var -> no cross-user leakage)
-      session$userData$csiapps_token <- access_token
+      # 1) Store the token per-session (never a process-global env var -> no
+      #    cross-user leakage). It goes into a reactiveVal so app reactives
+      #    gated on it (via make_request()/token_ready()) re-run on login.
+      .set_session_token(session, access_token)
 
       # 2) Load /me for first_name / last_name (for header). Guarded so an
       #    expired or rejected token degrades gracefully instead of crashing
@@ -241,7 +249,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
     observeEvent(input$logout, {
       userinfo(NULL)
-      session$userData$csiapps_token <- NULL
+      .set_session_token(session, NULL)
       if (isTRUE(sandbox)) {
         # No IdP to redirect to; re-seed the simulated session instead
         .sandbox_seed_session(user_token)

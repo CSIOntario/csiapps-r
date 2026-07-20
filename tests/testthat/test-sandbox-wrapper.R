@@ -84,7 +84,7 @@ test_that("sandbox seeds the session from an existing access token", {
     expect_identical(user_token()$access_token, "dev-token-abc")
     # ...and stored on the session (per-session, so concurrent users never
     # share a token) for make_request()/helpers to read
-    expect_identical(session$userData$csiapps_token, "dev-token-abc")
+    expect_identical(shiny::isolate(session$userData$csiapps_token_rv()), "dev-token-abc")
   }))
 })
 

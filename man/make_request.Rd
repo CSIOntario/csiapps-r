@@ -29,7 +29,7 @@ make_request(
 
 \item{headers}{Optional list of additional HTTP headers to include in the request}
 
-\item{token}{Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by \code{\link[=server_wrapper]{server_wrapper()}}), falling back to the \code{CSIAPPS_ACCESS_TOKEN} environment variable outside a session.}
+\item{token}{Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by \code{\link[=server_wrapper]{server_wrapper()}}), falling back to the \code{CSIAPPS_ACCESS_TOKEN} environment variable outside a session. Inside a Shiny session a not-yet-available token does not error: the request is cancelled quietly with \code{\link[shiny:req]{shiny::req()}}, and the calling reactive or observer re-runs automatically once login completes (see \code{\link[=token_ready]{token_ready()}}). Outside Shiny a missing token raises an error.}
 
 \item{timeout}{Request timeout in seconds; defaults to 20}
 

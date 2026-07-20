@@ -13,9 +13,10 @@ Helper functions and utilities for CSI data warehouse ingestion and shiny web ap
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/CSIOntario/csiapps}
+  \item \url{https://github.com/CSIOntario/csiapps-r}
+  \item \url{https://csiontario.github.io/csiapps-r/}
   \item \url{https://csiontario.github.io/csiapps/}
-  \item Report bugs at \url{https://github.com/CSIOntario/csiapps/issues}
+  \item Report bugs at \url{https://github.com/CSIOntario/csiapps-r/issues}
 }
 
 }

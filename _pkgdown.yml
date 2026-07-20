@@ -7,10 +7,10 @@ navbar:
   components:
     crosslang:
       text: R + Python docs
-      href: https://csiontario.github.io/csiapps-py/
+      href: https://csiontario.github.io/csiapps/
     python:
       text: Python reference
-      href: https://csiontario.github.io/csiapps-py/api/
+      href: https://csiontario.github.io/csiapps/api/
 reference:
 - title: Functions
 - subtitle: Shiny

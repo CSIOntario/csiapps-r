@@ -19,7 +19,7 @@ Imports:
     openssl,
     shiny,
     shinyjs
-URL: https://github.com/CSIOntario/csiapps-r, https://csiontario.github.io/csiapps-r/, https://csiontario.github.io/csiapps-py/
+URL: https://github.com/CSIOntario/csiapps-r, https://csiontario.github.io/csiapps-r/, https://csiontario.github.io/csiapps/
 BugReports: https://github.com/CSIOntario/csiapps-r/issues
 Suggests:
     jsonvalidate,

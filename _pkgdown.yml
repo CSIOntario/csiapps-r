@@ -19,6 +19,7 @@ reference:
   contents:
   - ui_wrapper
   - server_wrapper
+  - token_ready
   - global_wrapper
   - check_secrets
   - set_institute

@@ -47,7 +47,7 @@ make_request(
 
   Authentication token. When not provided, it is resolved for the
   current Shiny session (the token stored by
-  [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)),
+  [`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)),
   falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable
   outside a session.
 
@@ -78,15 +78,15 @@ make_request(
   and auth endpoints (e.g. `api/registration/...`, `api/csiauth/me/`)
   are not, and raise a 501 in sandbox unless `sandbox = FALSE` (for
   registration reads, use
-  [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+  [`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
   /
-  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
   instead). Defaults to
-  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md),
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps-r/reference/is_sandbox_mode.md),
   which is **TRUE by default**. Disable sandbox mode globally with
   `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to
   route requests to the production warehouse. See
-  [csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+  [csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
   for supported endpoints and limitations. In sandbox mode the HTTP-only
   arguments (`headers`, `token`, `timeout`, `max_pages`) are ignored,
   since no network request is made.

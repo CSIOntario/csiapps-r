@@ -29,7 +29,7 @@ The parsed schema, invisibly
 
 ## See also
 
-[csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 for an overview of sandbox mode and its limitations
 
 ## Examples

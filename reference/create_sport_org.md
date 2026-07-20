@@ -1,11 +1,11 @@
 # Create a dummy sport organization in the sandbox
 
 Registers a sport org so that sandbox reads
-([`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
+([`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md),
 and `fetch_profiles(filters = list(sport_org_id = ...))`) behave like
 production. The org's `name` becomes the `sport$name` of every athlete
 created under it with
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md).
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md).
 
 ## Usage
 
@@ -32,9 +32,9 @@ The created org (`list(id, name, annual_cycle_start)`), invisibly.
 
 ## See also
 
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md)
 to add athletes,
-[csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 for an overview
 
 ## Examples

@@ -5,13 +5,13 @@ Sandbox mode lets developers run the full schema -\> validate -\> ingest
 and no authentication. **Sandbox mode is enabled by default**, so that
 development work never reaches the production warehouse by accident: the
 same
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 calls are routed to a local, in-memory warehouse instead of the REST
 API. It is disabled for deployment with
 `options(csiapps.sandbox = FALSE)` (or by setting
 `CSIAPPS_ENV=production`), and can be overridden per call with the
 `sandbox` argument of
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).
 Because the production and sandbox workflows use the same calls, no code
 changes are needed when moving from development to deployment.
 
@@ -19,7 +19,7 @@ The sandbox emulates three endpoints:
 
 - `GET api/warehouse/data-sources/{uuid}` – returns the schema
   previously registered with
-  [`register_sandbox_schema()`](https://csiontario.github.io/csiapps/reference/register_sandbox_schema.md),
+  [`register_sandbox_schema()`](https://csiontario.github.io/csiapps-r/reference/register_sandbox_schema.md),
   nested under `head_primary_definition$schema` exactly like the real
   API.
 
@@ -27,7 +27,7 @@ The sandbox emulates three endpoints:
   against the registered schema for `body$source` (using `jsonvalidate`)
   and, on success, stores them in memory and writes the JSON payload to
   a per-source folder on disk for inspection (see
-  [`browse_sandbox()`](https://csiontario.github.io/csiapps/reference/browse_sandbox.md)).
+  [`browse_sandbox()`](https://csiontario.github.io/csiapps-r/reference/browse_sandbox.md)).
 
 - `GET api/warehouse/data-records` – returns previously ingested records
   for `query$source_uuid`, each wrapped in the same envelope (`data`,
@@ -35,19 +35,19 @@ The sandbox emulates three endpoints:
 
 Any other endpoint raises an error. Sandbox state lasts for the R
 session; use
-[`clear_sandbox()`](https://csiontario.github.io/csiapps/reference/clear_sandbox.md)
+[`clear_sandbox()`](https://csiontario.github.io/csiapps-r/reference/clear_sandbox.md)
 to reset it between tests.
 
 ## Shiny app wrappers
 
 Sandbox mode also lets a wrapped Shiny app (see
-[`ui_wrapper()`](https://csiontario.github.io/csiapps/reference/ui_wrapper.md),
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md),
-[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md))
+[`ui_wrapper()`](https://csiontario.github.io/csiapps-r/reference/ui_wrapper.md),
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md),
+[`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md))
 run locally without the OAuth2 redirect. The redirect exists only to
 obtain an access token, and requires client credentials that cannot be
 safely distributed, so in sandbox mode
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)
 **simulates the login** instead: it seeds the session from the
 developer's existing `CSIAPPS_ACCESS_TOKEN` and hands it to the same
 code path a production login would. The token is used **only to emulate
@@ -65,24 +65,24 @@ only the `csiapps.sandbox` option differs.
 - **The access token is used only to emulate login.** A wrapped app's
   `/me` identity is fetched from the real API with your token, so set
   the institute with
-  [`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+  [`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
   to match the institute that issued it or `/me` is rejected. Everything
   else is dummy: sport organizations and athletes come from the local
   registry
-  ([`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md),
-  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md))
+  ([`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md),
+  [`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md))
   and warehouse reads/writes are emulated in memory. No real client data
   is read.
 
 - **Only warehouse endpoints are routed through
-  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).**
+  [`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).**
   Calling `make_request("api/registration/...")` in sandbox raises a
   501; use the
-  [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+  [`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
   /
-  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
   helpers, which read the dummy registry instead. In sandbox,
-  [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+  [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
   honours only the `sport_org_id` filter; other filters are ignored. The
   sandbox faithfully simulates the *schema contract*, not the warehouse.
   Anything that depends on server-side state will differ from
@@ -103,7 +103,7 @@ only the `csiapps.sandbox` option differs.
 - **`subject` linkage is emulated only for registered athletes.** On
   retrieval the sandbox resolves each record's `subject_field` value
   against athletes registered with
-  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+  [`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md)
   and returns the matched athlete (id, name, sport) in the record
   envelope, mirroring production. Resolution happens at read time, so
   athletes registered after ingestion are linked on the next read. If no

@@ -17,7 +17,7 @@ The following environment variables must be set to make requests to the
 ### Overview
 
 `csiapps` includes a generic
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 function to make requests to the `CSIAPPS` REST API. Please refer to the
 [CSIAPPS Swagger documentation](https://apps.csiontario.ca/api/swagger/)
 for full details on available endpoints, parameters, and response
@@ -28,7 +28,7 @@ using `csiapps`.
 
 > **Note:** By default, `csiapps` runs in **sandbox mode**, so the
 > **warehouse**
-> [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+> [`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 > calls below are routed to a local, in-memory warehouse rather than the
 > production API. This lets you develop and test safely without touching
 > production data. Not every endpoint is emulated, though — the
@@ -38,7 +38,7 @@ using `csiapps`.
 > documents the **production** REST API semantics; for the full local
 > workflow — registering orgs and athletes, schemas, ingestion, and
 > retrieval against the emulated warehouse — see the dedicated [Sandbox
-> Mode](https://csiontario.github.io/csiapps/articles/sandbox.md)
+> Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)
 > article.
 
 ### Authorization Status
@@ -66,25 +66,25 @@ result <- make_request(
 > sandbox mode raises a 501. Pass `sandbox = FALSE` to reach the real
 > endpoint. Inside a wrapped Shiny app, `/me` is loaded for you by the
 > login simulation (see the [Sandbox
-> Mode](https://csiontario.github.io/csiapps/articles/sandbox.md)
+> Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)
 > article) — you don’t call it directly.
 
 ### Registration API
 
 The registration API provides access to profiles and organisations via
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md),
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md),
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md),
 and
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md).
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md).
 The examples below pass `sandbox = FALSE` to contact the **real**
 registration API. In sandbox mode (the default) these same helpers read
 from a local dummy registry — see the [Sandbox
-Mode](https://csiontario.github.io/csiapps/articles/sandbox.md) article
-for that workflow.
+Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)
+article for that workflow.
 
 #### Organisations
 
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
 returns all organisations your token can see, formatted as
 `label`/`value` pairs ready for a Shiny `selectInput()`:
 
@@ -98,7 +98,7 @@ orgs <- fetch_org_options(sandbox = FALSE)
 
 ##### Doing this with `make_request()`
 
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
 is a thin wrapper over a `GET` to the `api/registration/organization/`
 endpoint. You can make the same call directly:
 
@@ -116,14 +116,14 @@ orgs <- resp$results          # each element has $id and $name
 > registration endpoints have **no sandbox emulation**.
 > `make_request("api/registration/...")` in the default sandbox mode
 > raises a 501 — you must pass `sandbox = FALSE`. In sandbox, reach for
-> [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+> [`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
 > instead: it reads the local dummy registry directly (see the [Sandbox
-> Mode](https://csiontario.github.io/csiapps/articles/sandbox.md)
+> Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)
 > article).
 
 #### Profiles
 
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 returns all profiles accessible to your token, with automatic
 pagination. Filter by organisation using `sport_org_id`:
 
@@ -153,7 +153,7 @@ profile_df <- do.call(rbind, lapply(profiles, function(p) {
 }))
 ```
 
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 retrieves a single profile by ID:
 
 ``` r
@@ -165,7 +165,7 @@ profile$person$first_name
 ##### Doing this with `make_request()`
 
 Both helpers wrap the `api/registration/profile/` endpoint.
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 paginates and returns one flat list; `make_request(paginate = TRUE)`
 returns a **list of pages**, so flatten the `results` yourself:
 
@@ -182,7 +182,7 @@ profiles <- do.call(c, lapply(pages, function(p) p$results))
 
 A single profile is the same endpoint with the ID appended — the direct
 equivalent of
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md):
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md):
 
 ``` r
 
@@ -194,9 +194,9 @@ profile <- make_request(
 
 > **Sandbox note:** as with organisations, these calls have **no sandbox
 > emulation** and raise a 501 unless `sandbox = FALSE`. Use
-> [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+> [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 > /
-> [`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+> [`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 > in sandbox — they read the local dummy registry directly.
 
 ### Data Warehouse Ingestion
@@ -214,7 +214,7 @@ defined for the target data source.
 > does not choose or hard-code it. Read it as
 > `Sys.getenv("SOURCE_UUID")` (as below) so the same code runs in
 > development and production. See the [Sandbox
-> Mode](https://csiontario.github.io/csiapps/articles/sandbox.md)
+> Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)
 > article for how this works during local development.
 
 #### JSON Schema Definition
@@ -342,7 +342,7 @@ records <- make_request(
 
 ### Sandbox Mode
 
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 runs against a **local sandbox** by default, so pipelines can be
 developed and tested with no network access, no authentication, and no
 risk of writing test data to the production warehouse. Sandbox mode is
@@ -356,21 +356,21 @@ emulate raise a **501** unless you pass `sandbox = FALSE`:
 | Endpoint (`make_request`) | Default sandbox | `sandbox = FALSE` | Sandbox alternative |
 |----|----|----|----|
 | `api/csiauth/me/` | ✗ 501 | ✓ | login simulation (Shiny) |
-| `api/registration/organization/` | ✗ 501 | ✓ | [`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md) |
-| `api/registration/profile/` | ✗ 501 | ✓ | [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md) / [`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md) |
+| `api/registration/organization/` | ✗ 501 | ✓ | [`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md) |
+| `api/registration/profile/` | ✗ 501 | ✓ | [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md) / [`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md) |
 | `api/warehouse/data-sources/{uuid}` | ✓ emulated | ✓ | — |
 | `api/warehouse/ingestion/primary/` | ✓ emulated | ✓ | — |
 | `api/warehouse/data-records` | ✓ emulated | ✓ | — |
 
 In short: the **warehouse**
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 examples in this article work in both modes, while the
 **registration/auth**
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 examples work only against the real API (`sandbox = FALSE`). For
 registration data in sandbox, use the `fetch_*` helpers, which read the
 local dummy registry directly instead of going through
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).
 
 The full sandbox workflow — enabling/disabling it, registering sport
 orgs and athletes, registering schemas, validating, ingesting, and
@@ -378,8 +378,8 @@ retrieving records against the emulated warehouse, and inspecting or
 resetting sandbox state — is documented in its own article:
 
 **→ [Sandbox
-Mode](https://csiontario.github.io/csiapps/articles/sandbox.md)**
+Mode](https://csiontario.github.io/csiapps-r/articles/sandbox.md)**
 
 See also
-[`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 for the reference-level overview.

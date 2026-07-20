@@ -1,7 +1,7 @@
 # Check whether sandbox mode is enabled globally
 
 Determines the default value of the `sandbox` argument of
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).
 **Sandbox mode is enabled by default**, so that requests never reach the
 production warehouse unless it is explicitly turned off. It is disabled
 when the `csiapps.sandbox` R option is set to `FALSE`, or, if that
@@ -21,7 +21,7 @@ logical; `TRUE` if sandbox mode is enabled globally
 
 ## See also
 
-[csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 for an overview of sandbox mode
 
 ## Examples

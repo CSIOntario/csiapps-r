@@ -16,7 +16,7 @@ fetch_org_options(token = NULL, sandbox = is_sandbox_mode())
 
   Character. Authentication token. When not supplied, it is resolved for
   the current Shiny session (the token stored by
-  [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md))
+  [`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md))
   and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN` environment
   variable.
 
@@ -25,9 +25,9 @@ fetch_org_options(token = NULL, sandbox = is_sandbox_mode())
   Logical. When `TRUE` (the default in development), no network call is
   made and the local dummy registry is returned (the orgs registered
   with
-  [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)).
+  [`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md)).
   Set to `FALSE` to fetch real organisations from the API. Defaults to
-  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps-r/reference/is_sandbox_mode.md).
 
 ## Value
 
@@ -36,9 +36,9 @@ A list of named lists, each with `label` (organisation name) and `value`
 
 ## See also
 
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 to fetch profiles,
-[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+[`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
 to configure the target institute.
 
 ## Examples

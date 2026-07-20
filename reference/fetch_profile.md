@@ -14,7 +14,7 @@ fetch_profile(token = NULL, profile_id, sandbox = is_sandbox_mode())
 
   Character. Authentication token. When not supplied, it is resolved for
   the current Shiny session (the token stored by
-  [`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md))
+  [`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md))
   and otherwise falls back to the `CSIAPPS_ACCESS_TOKEN` environment
   variable.
 
@@ -27,22 +27,22 @@ fetch_profile(token = NULL, profile_id, sandbox = is_sandbox_mode())
   Logical. When `TRUE` (the default in development), no network call is
   made and the profile is looked up in the local dummy registry (those
   created with
-  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)),
+  [`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md)),
   returning `NULL` if no such id exists. Set to `FALSE` to fetch the
   real profile from the API. Defaults to
-  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps-r/reference/is_sandbox_mode.md).
 
 ## Value
 
 A single profile object as a list, or `NULL` if no profile with that id
 exists. The structure mirrors the list elements returned by
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md).
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md).
 
 ## See also
 
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 to retrieve multiple profiles,
-[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+[`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
 to configure the target institute.
 
 ## Examples

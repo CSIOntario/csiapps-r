@@ -25,9 +25,9 @@ code.
 
 This article walks through sandbox mode from start to finish. If you are
 looking for the production REST API semantics, see the [CSIAPPS REST
-API](https://csiontario.github.io/csiapps/articles/api.md) article; for
-wrapping a Shiny app, see [Developing Shiny Web
-Applications](https://csiontario.github.io/csiapps/articles/csiapps.md).
+API](https://csiontario.github.io/csiapps-r/articles/api.md) article;
+for wrapping a Shiny app, see [Developing Shiny Web
+Applications](https://csiontario.github.io/csiapps-r/articles/csiapps.md).
 
 ### What is real and what is dummy
 
@@ -37,15 +37,15 @@ identity — versus everything else, which is dummy:
 | Concern | In sandbox mode |
 |----|----|
 | **Login / `/me` identity** | Emulated using your real `CSIAPPS_ACCESS_TOKEN`. The token is used *only* to load `/me`, so a wrapped app’s header shows your real name. |
-| **Sport organizations** | Dummy. Created locally with [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md). |
-| **Athlete profiles** | Dummy. Created locally with [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md) (names drawn from the `babynames` dataset). |
+| **Sport organizations** | Dummy. Created locally with [`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md). |
+| **Athlete profiles** | Dummy. Created locally with [`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md) (names drawn from the `babynames` dataset). |
 | **Warehouse schemas & records** | Dummy. Registered and ingested into an in-memory warehouse; nothing leaves your machine. |
 
 No real client data is ever read except your own `/me` identity.
 
 ## Enabling and disabling sandbox mode
 
-[`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md)
+[`is_sandbox_mode()`](https://csiontario.github.io/csiapps-r/reference/is_sandbox_mode.md)
 reports whether sandbox mode is currently on, and it supplies the
 default for the `sandbox` argument of every sandbox-aware function.
 
@@ -104,12 +104,12 @@ deployment:
 ## Running a wrapped Shiny app in the sandbox
 
 Sandbox mode also lets a wrapped Shiny app (see
-[`ui_wrapper()`](https://csiontario.github.io/csiapps/reference/ui_wrapper.md),
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md))
+[`ui_wrapper()`](https://csiontario.github.io/csiapps-r/reference/ui_wrapper.md),
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md))
 run locally **without** the OAuth2 redirect. The redirect exists only to
 obtain an access token, and it requires client credentials that cannot
 be safely distributed — so in sandbox mode
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)
 **simulates the login** instead: it seeds the session from the
 `CSIAPPS_ACCESS_TOKEN` you already have and hands it to the same code
 path a production login would use.
@@ -125,35 +125,35 @@ check_secrets()             # reports whether a token was found (never errors in
 With a token set, the app’s header loads your **real** identity from
 `/me`, exactly as after a production login. Because `/me` is the *only*
 real call, you must
-[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+[`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
 to match the institute that issued the token, or the lookup is rejected.
 
 If **no** token is set, the app shell still renders but shows an
 unauthenticated notice prompting you to set a read-only
 `CSIAPPS_ACCESS_TOKEN`. In sandbox mode
-[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
+[`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md)
 never errors on the (unneeded) OAuth secrets — it simply reports whether
 a token was found.
 
 ## The registration workflow
 
 In sandbox mode the registration helpers —
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md),
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md),
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md),
 and
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 — read from a **local dummy registry** instead of the network. You seed
 that registry with
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md)
 and
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md),
 and the fetch helpers then return dummy data in the same shape the real
 API uses, so dashboards can be built and tested without a live
 connection.
 
 ### 1. Register sport organizations
 
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md)
 registers a dummy sport org. Its `name` becomes the `sport$name` of
 every athlete you later create under it. If you omit `id`, an unused id
 in `1:999` is generated; otherwise you may pin any positive integer id
@@ -171,13 +171,13 @@ create_sport_org("Athletics Canada", id = 42L)
 
 Ids must be unique within the sandbox; reusing one raises an error.
 Calling
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md)
 outside sandbox mode warns and has no effect (dummy orgs are only read
 by the sandbox helpers).
 
 ### 2. Register athletes under a sport org
 
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md)
 generates `n` random athlete profiles and registers them under an
 **existing** sport org. Each profile is production-shaped (a `person`
 sub-list, a `sport` link, status fields, and so on), so downstream code
@@ -197,7 +197,7 @@ create_profile(
 ```
 
 The org must already exist —
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md)
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md)
 errors if `sport_org_id` is unknown. Profiles are appended to any
 already registered, and each athlete’s `sport$id` is the `sport_org_id`,
 which is the field the `sport_org_id` filter matches against in
@@ -207,7 +207,7 @@ which is the field the `sport_org_id` filter matches against in
 
 Once the registry is seeded, the same fetch helpers your production app
 uses read it back.
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
 returns `label`/`value` pairs ready for a Shiny
 [`selectInput()`](https://rdrr.io/pkg/shiny/man/selectInput.html):
 
@@ -216,7 +216,7 @@ returns `label`/`value` pairs ready for a Shiny
 fetch_org_options()   # list(list(label = "Rowing Canada", value = 123L), ...)
 ```
 
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 returns all registered athletes, optionally filtered by organisation.
 **Only the `sport_org_id` filter is honoured in the sandbox**; other
 filters are ignored.
@@ -245,7 +245,7 @@ profile_df <- do.call(rbind, lapply(profiles, function(p) {
 }))
 ```
 
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 retrieves a single athlete by id, returning `NULL` if no such id is
 registered:
 
@@ -256,15 +256,15 @@ profile$person$first_name
 ```
 
 With nothing registered,
-[`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md)
+[`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md)
 and
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 return [`list()`](https://rdrr.io/r/base/list.html) and
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 returns `NULL`.
 
 > **Note:** Only the warehouse endpoints are routed through
-> [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).
+> [`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).
 > Calling `make_request("api/registration/...")` in the sandbox raises a
 > 501 — use the `fetch_*` helpers above, which read the dummy registry
 > instead.
@@ -272,7 +272,7 @@ returns `NULL`.
 ## The data warehouse workflow
 
 The sandbox emulates three warehouse endpoints through the ordinary
-[`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+[`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 interface, validating records against a registered JSON schema and
 storing accepted payloads locally:
 
@@ -411,7 +411,7 @@ records <- make_request(
 Each returned record is wrapped in the same envelope the real API uses
 (`id`, `dataset_uuid`, `data`, `subject`, `created_at`, `updated_at`).
 If a record’s `subject_field` value matches an athlete registered with
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md),
 the sandbox resolves the `subject` to that athlete (id, name, sport);
 otherwise `subject` is `NULL`. Resolution happens at **read time**, so
 athletes registered *after* ingestion backfill on the next read.
@@ -534,7 +534,7 @@ production will.
 
 The `id` column of your mapping must match real athlete ids. In the
 sandbox those come from
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md),
 which assigns ids in insertion order.
 
 A project often reads several named sources, so give each one its **own
@@ -582,7 +582,7 @@ write.csv(
 ### 3. Register the AMS_mapping schema
 
 Register the AMS_mapping JSON schema under your placeholder source.
-[`register_sandbox_schema()`](https://csiontario.github.io/csiapps/reference/register_sandbox_schema.md)
+[`register_sandbox_schema()`](https://csiontario.github.io/csiapps-r/reference/register_sandbox_schema.md)
 accepts a path to the `.schema.json` file (or a JSON string / R list):
 
 ``` r
@@ -630,7 +630,7 @@ records, keep the active ones, and
 [`merge()`](https://rdrr.io/r/base/merge.html) your real vendor data
 onto them by `vendor_profile_id` — every vendor measurement now carries
 a canonical CSIAPPS `id`, which you can enrich with
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md):
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md):
 
 ``` r
 
@@ -708,16 +708,16 @@ production:
 - **`subject` linkage is emulated only for registered athletes.** On
   retrieval the sandbox resolves each record’s `subject_field` value
   against athletes created with
-  [`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+  [`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md),
   returning the matched athlete — or `NULL` if none is registered.
   Production would reject an unresolved subject; the sandbox accepts it
   silently.
 
 - **Only warehouse endpoints go through
-  [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md).**
+  [`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md).**
   Registration endpoints raise a 501; use the `fetch_*` helpers, which
   read the dummy registry. Any other endpoint is unsupported.
 
 See
-[`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[`?"csiapps-sandbox"`](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 for the full reference.

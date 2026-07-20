@@ -67,7 +67,7 @@ several functions provided by `csiapps`.
 
 We specify which institute internal API calls should be made for (such
 as authentication redirects) by the application using
-[`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md).
+[`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md).
 
 ``` r
 
@@ -78,12 +78,12 @@ csiapps::set_institute("csiontario")
 ### 2. `check_secrets()`
 
 We then run
-[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
+[`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md)
 to ensure that all environment variables required have been set. The
 `verbose` argument, which is `FALSE` by default, can be set to `TRUE` to
 print out the values of the environment variables that are being
 checked.
-[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
+[`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md)
 will throw an error if any of the required environment variables are not
 present, making it useful for debugging.
 
@@ -95,7 +95,7 @@ csiapps::check_secrets(verbose = FALSE)
 ### 3. `global_wrapper()`
 
 For code defined outside but used within the `server` function, we use
-[`global_wrapper()`](https://csiontario.github.io/csiapps/reference/global_wrapper.md)
+[`global_wrapper()`](https://csiontario.github.io/csiapps-r/reference/global_wrapper.md)
 to ensure that it is accessible by internal helper functions.
 
 ``` r
@@ -108,9 +108,9 @@ csiapps::global_wrapper({
 ### 4. `ui_wrapper()` and `server_wrapper()`
 
 The `ui` page and `server` function can simply be wrapped by
-[`ui_wrapper()`](https://csiontario.github.io/csiapps/reference/ui_wrapper.md)
+[`ui_wrapper()`](https://csiontario.github.io/csiapps-r/reference/ui_wrapper.md)
 and
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md),
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md),
 respectively. These convenience functions include additional code to
 redirect the application to CSIAPPS for user authentication and provide
 aesthetic formatting.
@@ -190,7 +190,7 @@ shinyApp(ui = ui_wrapper(ui), server = server_wrapper(server))
 The code above is written for production, but you do **not** need any
 client credentials or a running identity provider to develop it. By
 default `csiapps` is in **sandbox mode**, and
-[`server_wrapper()`](https://csiontario.github.io/csiapps/reference/server_wrapper.md)
+[`server_wrapper()`](https://csiontario.github.io/csiapps-r/reference/server_wrapper.md)
 **simulates the login redirect**: instead of sending the browser to
 CSIAPPS to authenticate, it seeds the session from the
 `CSIAPPS_ACCESS_TOKEN` you already have in your environment.
@@ -205,11 +205,11 @@ your **real** identity (`/me`) from the API, exactly as it would after a
 production login. The token is used **only to emulate the login** —
 everything else (sport organizations, athletes, warehouse records) is
 dummy, served from the local sandbox (see
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md),
-[`create_profile()`](https://csiontario.github.io/csiapps/reference/create_profile.md),
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md),
+[`create_profile()`](https://csiontario.github.io/csiapps-r/reference/create_profile.md),
 and
-[`vignette("api")`](https://csiontario.github.io/csiapps/articles/api.md)).
-[`check_secrets()`](https://csiontario.github.io/csiapps/reference/check_secrets.md)
+[`vignette("api")`](https://csiontario.github.io/csiapps-r/articles/api.md)).
+[`check_secrets()`](https://csiontario.github.io/csiapps-r/reference/check_secrets.md)
 reports whether a token was found rather than erroring on the (unneeded)
 OAuth secrets. If no token is set, the app shell still renders but shows
 an unauthenticated notice prompting you to set a read-only
@@ -217,13 +217,13 @@ an unauthenticated notice prompting you to set a read-only
 
 > **Note:** Sandbox mode never touches real client data. Warehouse calls
 > made through
-> [`make_request()`](https://csiontario.github.io/csiapps/reference/make_request.md)
+> [`make_request()`](https://csiontario.github.io/csiapps-r/reference/make_request.md)
 > are emulated locally, and registration reads
-> ([`fetch_org_options()`](https://csiontario.github.io/csiapps/reference/fetch_org_options.md),
-> [`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md))
+> ([`fetch_org_options()`](https://csiontario.github.io/csiapps-r/reference/fetch_org_options.md),
+> [`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md))
 > come from the local dummy registry. Only `/me` uses your real token —
 > call
-> [`set_institute()`](https://csiontario.github.io/csiapps/reference/set_institute.md)
+> [`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
 > to match the institute that issued it, or that lookup is rejected.
 
 ### Deploying

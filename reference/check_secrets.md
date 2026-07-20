@@ -23,6 +23,6 @@ check_secrets(verbose = FALSE, sandbox = is_sandbox_mode())
   `CSIAPPS_ACCESS_TOKEN` is reported, since that determines whether real
   registration data is available. Never errors in sandbox mode. Defaults
   to
-  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps/reference/is_sandbox_mode.md).
+  [`is_sandbox_mode()`](https://csiontario.github.io/csiapps-r/reference/is_sandbox_mode.md).
   See
-  [csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md).
+  [csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md).

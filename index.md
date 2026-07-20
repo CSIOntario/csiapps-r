@@ -3,20 +3,20 @@
 ## Installation
 
 You can install the development version of `csiapps` from
-[GitHub](https://github.com/CSIOntario/csiapps) with:
+[GitHub](https://github.com/CSIOntario/csiapps-r) with:
 
 ``` r
 
 # install.packages("remotes")
-remotes::install_github("CSIOntario/csiapps")
+remotes::install_github("CSIOntario/csiapps-r")
 ```
 
 ## Usage
 
 Please refer to
-[`vignette("csiapps")`](https://csiontario.github.io/csiapps/articles/csiapps.md)
+[`vignette("csiapps")`](https://csiontario.github.io/csiapps-r/articles/csiapps.md)
 and
-[`vignette("api")`](https://csiontario.github.io/csiapps/articles/api.md)
+[`vignette("api")`](https://csiontario.github.io/csiapps-r/articles/api.md)
 for more information on how to use this library.
 
 `csiapps` is also available for Python. The [cross-language

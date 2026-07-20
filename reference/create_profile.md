@@ -2,11 +2,11 @@
 
 Generates `n` random athlete profiles and registers them under an
 existing sandbox sport org, so sandbox
-[`fetch_profiles()`](https://csiontario.github.io/csiapps/reference/fetch_profiles.md)
+[`fetch_profiles()`](https://csiontario.github.io/csiapps-r/reference/fetch_profiles.md)
 /
-[`fetch_profile()`](https://csiontario.github.io/csiapps/reference/fetch_profile.md)
+[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md)
 return prod-shaped data. The org must already exist (see
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md)).
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md)).
 
 ## Usage
 
@@ -23,7 +23,7 @@ create_profile(n, sport_org_id, first_names = NULL, last_names = NULL)
 - sport_org_id:
 
   Integer. Id of the sport org (from
-  [`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md))
+  [`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md))
   the athletes belong to. Stored as each profile's `sport$id` (the
   filter `fetch_profiles(filters = list(sport_org_id = ...))` uses), and
   its name becomes each profile's `sport$name`. The org must already
@@ -42,8 +42,8 @@ The created profiles, invisibly. Appended to any already registered.
 
 ## See also
 
-[`create_sport_org()`](https://csiontario.github.io/csiapps/reference/create_sport_org.md),
-[csiapps-sandbox](https://csiontario.github.io/csiapps/reference/csiapps-sandbox.md)
+[`create_sport_org()`](https://csiontario.github.io/csiapps-r/reference/create_sport_org.md),
+[csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
 
 ## Examples
 

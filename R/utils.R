@@ -139,12 +139,10 @@ fetch_org_options <- function(token = NULL, sandbox = is_sandbox_mode()) {
     message("csiapps sandbox: fetch_org_options() reading local registry (see create_sport_org())")
     return(lapply(unname(.sandbox_env$orgs), function(o) list(label = o$name, value = o$id)))
   }
-  if (is.null(token) || !nzchar(token)) {
+  if (.no_token(token)) {
     token <- .current_token()
   }
-  if (!nzchar(token)) {
-    stop("fetch_org_options: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
-  }
+  if (!nzchar(token)) .auth_gate("fetch_org_options")
 
   url <- paste0(SITE_URL(), SPORT_ORG_ENDPOINT)  # "/api/registration/organization/"
 
@@ -245,12 +243,10 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
     }
     return(profs)
   }
-  if (is.null(token) || !nzchar(token)) {
+  if (.no_token(token)) {
     token <- .current_token()
   }
-  if (!nzchar(token)) {
-    stop("fetch_profiles: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
-  }
+  if (!nzchar(token)) .auth_gate("fetch_profiles")
 
   url    <- paste0(SITE_URL(), PROFILE_ENDPOINT)  # "/api/registration/profile/"
   params <- c(filters, list(limit = 100L, offset = 0L))
@@ -320,12 +316,10 @@ fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode())
     hit <- Filter(function(p) identical(as.integer(p$id), as.integer(profile_id)), .sandbox_env$profiles)
     return(if (length(hit)) hit[[1]] else NULL)
   }
-  if (is.null(token) || !nzchar(token)) {
+  if (.no_token(token)) {
     token <- .current_token()
   }
-  if (!nzchar(token)) {
-    stop("fetch_profile: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
-  }
+  if (!nzchar(token)) .auth_gate("fetch_profile")
 
   # URL-encode the id so an unusual value can't alter the request path.
   enc_id <- utils::URLencode(as.character(profile_id), reserved = TRUE)
@@ -452,18 +446,102 @@ is_sandbox_mode <- function() {
   TRUE                                            # nothing set -> sandbox ON
 }
 
-# Resolve the access token for an API request. Inside a Shiny session the token
-# is stored per-session on `session$userData$csiapps_token` (set by
-# server_wrapper()), so concurrent users never share or clobber each other's
-# token. Outside a Shiny session (CLI, scripts) there is no reactive domain, so
-# we fall back to the process-wide CSIAPPS_ACCESS_TOKEN environment variable.
+# ---- Per-session token storage ------------------------------------------
+#
+# The access token lives in a reactiveVal kept on session$userData, so
+# concurrent users never share or clobber each other's token (the reason the
+# process-wide env var was retired). It is a reactiveVal rather than a plain
+# value so that reading it from a reactive context registers a dependency: an
+# app reactive that runs before login completes is cancelled quietly (see
+# .auth_gate()) and re-runs on its own once server_wrapper() stores the token.
+# Lazily created so it does not matter whether the wrapper or the app touches
+# it first; userData is shared with module sessions, so modules see the same
+# token.
+
+.token_rv <- function(domain) {
+  rv <- domain$userData$csiapps_token_rv
+  if (is.null(rv)) {
+    rv <- shiny::reactiveVal(NULL)
+    domain$userData$csiapps_token_rv <- rv
+  }
+  rv
+}
+
+# Called by server_wrapper() on login/logout.
+.set_session_token <- function(session, token) {
+  .token_rv(session)(token)
+}
+
+# Legacy compatibility. Before tokens became per-session, server_wrapper()
+# exported the real token as a process-wide env var, and some apps copied
+# guards like req(nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) into their server
+# code. Seeding the env var with this non-secret placeholder keeps those guards
+# passing (real gating now happens inside make_request()/token_ready(), which
+# never accept the placeholder as a credential), so legacy apps keep working
+# without a code change and without a real token ever going process-global.
+.TOKEN_PLACEHOLDER <- "<csiapps-token-managed-per-session>"
+
+.seed_env_placeholder <- function() {
+  if (!nzchar(Sys.getenv("CSIAPPS_ACCESS_TOKEN"))) {
+    Sys.setenv(CSIAPPS_ACCESS_TOKEN = .TOKEN_PLACEHOLDER)
+  }
+  invisible()
+}
+
+# TRUE when a token argument/value cannot be used as a credential and must be
+# resolved (or gated) instead. The placeholder is deliberately unusable so a
+# legacy app passing token = Sys.getenv("CSIAPPS_ACCESS_TOKEN") explicitly
+# still gets the per-session token rather than sending the placeholder.
+.no_token <- function(token) {
+  is.null(token) || !nzchar(token) || identical(token, .TOKEN_PLACEHOLDER)
+}
+
+# Resolve the access token for an API request. Inside a Shiny session, read the
+# per-session token — reactively when a reactive context is active (so the
+# caller re-runs when the token changes), quietly via isolate() otherwise
+# (e.g. inside a downloadHandler). Outside a Shiny session (CLI, scripts) fall
+# back to the process-wide CSIAPPS_ACCESS_TOKEN environment variable.
 .current_token <- function() {
   domain <- shiny::getDefaultReactiveDomain()
   if (!is.null(domain)) {
-    tok <- domain$userData$csiapps_token
-    if (!is.null(tok) && nzchar(tok)) return(tok)
+    rv  <- .token_rv(domain)
+    tok <- tryCatch(rv(), error = function(e) shiny::isolate(rv()))
+    if (!.no_token(tok)) return(tok)
   }
-  Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+  tok <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
+  if (.no_token(tok)) "" else tok
+}
+
+# Called when a token is required but absent. Inside a Shiny session that is
+# the normal pre-login state, so cancel the current computation quietly with
+# req(); because .current_token() just read the token reactiveVal, the
+# computation re-runs on its own when login completes. Outside Shiny a missing
+# token is a configuration error, so fail loudly.
+.auth_gate <- function(what) {
+  if (!is.null(shiny::getDefaultReactiveDomain())) shiny::req(FALSE)
+  stop(what, ": no CSIAPPS_ACCESS_TOKEN set; user not authenticated?", call. = FALSE)
+}
+
+#' Is a CSIAPPS access token available yet?
+#'
+#' Returns `TRUE` once an access token is available for the current context:
+#' inside a Shiny app wrapped by [server_wrapper()], the per-session token
+#' stored at login; outside Shiny, the `CSIAPPS_ACCESS_TOKEN` environment
+#' variable.
+#'
+#' The check is reactive-friendly: called from a reactive expression or
+#' observer it takes a dependency on the session's token, so a guard like
+#' `req(token_ready())` re-fires automatically when login completes, instead of
+#' silently sticking in the cancelled state. Note that [make_request()] and the
+#' `fetch_*()` helpers already gate themselves this way, so an explicit guard
+#' is only needed for work that should wait for login without making an API
+#' call (e.g. processing an uploaded file).
+#'
+#' @return logical; `TRUE` if an access token is available.
+#' @seealso [server_wrapper()], [make_request()]
+#' @export
+token_ready <- function() {
+  nzchar(.current_token())
 }
 
 #' Make an authenticated API request to CSIAPPS
@@ -473,7 +551,7 @@ is_sandbox_mode <- function() {
 #' @param body Optional request body for POST/PUT/PATCH requests; should be an R object that can be serialized to JSON
 #' @param query Optional list of query parameters to include in the request URL
 #' @param headers Optional list of additional HTTP headers to include in the request
-#' @param token Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by [server_wrapper()]), falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable outside a session.
+#' @param token Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by [server_wrapper()]), falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable outside a session. Inside a Shiny session a not-yet-available token does not error: the request is cancelled quietly with [shiny::req()], and the calling reactive or observer re-runs automatically once login completes (see [token_ready()]). Outside Shiny a missing token raises an error.
 #' @param timeout Request timeout in seconds; defaults to 20
 #' @param verbose If TRUE, prints request and response details to the console for debugging purposes
 #' @param paginate If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.
@@ -520,7 +598,7 @@ make_request <- function(
   # Resolve the token per Shiny session (see .current_token()); the process-wide
   # env var is only the fallback for non-Shiny use, so concurrent app users never
   # share a token.
-  if (is.null(token) || !nzchar(token)) token <- .current_token()
+  if (.no_token(token)) token <- .current_token()
 
   .make_http_request(
     endpoint  = endpoint,
@@ -548,9 +626,7 @@ make_request <- function(
     paginate = FALSE,
     max_pages = 50
   ) {
-  if (is.null(token) || !nzchar(token)) {
-    stop("make_request: no CSIAPPS_ACCESS_TOKEN set; user not authenticated?")
-  }
+  if (.no_token(token)) .auth_gate("make_request")
 
   req <- httr2::request(SITE_URL()) |>
     httr2::req_url_path_append(endpoint) |>

@@ -322,7 +322,7 @@ csi_chrome_styles <- function() {
       color: %2$s !important;
     }
     /* Pin the logo size. The height is set as an HTML attribute (low priority),
-       so a wrapped app's own `img {}` rule (e.g. `height:auto`/`max-width:100%`
+       so a wrapped app's own `img {}` rule (e.g. `height:auto`/`max-width:100%%`
        from a theme or Bootstrap) would otherwise resize the logo and push it
        through the red accent line. */
     #csi-navbar .navbar-brand img {

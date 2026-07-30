@@ -1,6 +1,6 @@
 Package: csiapps
 Title: Helper functions for CSIAPPS
-Version: 0.1.4
+Version: 0.1.5
 Authors@R: c(
     person("David", "Awosoga", , "dawosoga@csiontario.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2741-5770")),
@@ -12,6 +12,8 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.4.0)
 Imports:
     babynames,
     httr2,

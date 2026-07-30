@@ -23,6 +23,11 @@ jobs:
           - {os: ubuntu-latest,  r: 'release'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
+          # The previous R minor. Institutional and Connect installs lag the
+          # current release, so `release`-only would not notice a break for
+          # them. DESCRIPTION declares R (>= 4.1.0); this covers the recent end
+          # of that range, not the floor itself.
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}

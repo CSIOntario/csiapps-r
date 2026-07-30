@@ -9,13 +9,20 @@
 
 ## Installation
 
-You can install the development version of `csiapps` from
-[GitHub](https://github.com/CSIOntario/csiapps-r) with:
+`csiapps` is distributed from
+[GitHub](https://github.com/CSIOntario/csiapps-r) — there is no CRAN
+release, so the ref you install decides what you get:
 
 ``` r
 # install.packages("remotes")
-remotes::install_github("CSIOntario/csiapps-r")
+remotes::install_github("CSIOntario/csiapps-r")          # main — the last released state
+remotes::install_github("CSIOntario/csiapps-r@v0.1.4")   # a pinned release (use this in apps)
+remotes::install_github("CSIOntario/csiapps-r@staging")  # unreleased, pre-validation
 ```
+
+Deployed apps should pin a tag rather than track `main`; on Posit Connect
+Cloud that pin lives in the app’s `manifest.json` as a commit SHA. See
+[CONTRIBUTING.md](CONTRIBUTING.md#branches-which-ref-serves-whom).
 
 ## Usage
 

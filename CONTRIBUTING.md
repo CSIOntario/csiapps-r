@@ -12,8 +12,34 @@ Thanks for improving `csiapps`. A few pointers:
   **[Releasing csiapps](https://csiontario.github.io/csiapps/releasing/)** — it is
   the canary→publish playbook: validate the change against the
   [`dummy-r-shiny`](https://github.com/CSIOntario/dummy-r-shiny) regression
-  harness locally, push to a branch, re-validate on the deployed dummy app, then
-  merge, tag, and update the docs. Open the **R** tab on that page.
+  harness locally, merge to `staging`, re-validate on the deployed dummy app,
+  then fast-forward to `main`, tag, and update the docs. Open the **R** tab on
+  that page.
+
+## Branches: which ref serves whom
+
+There is no CRAN or PyPI for `csiapps-r` — a git ref *is* the distribution
+channel, so which ref you touch decides who is affected.
+
+| Ref | What it is | Who gets it |
+|-----|------------|-------------|
+| feature branch | your work in progress | you |
+| `staging` | integration; validated by the deployed dummy app | `deploy.R` in `dummy-r-shiny`, by default |
+| `main` | last released state | bare `remotes::install_github("CSIOntario/csiapps-r")`, and the [pkgdown reference site](https://csiontario.github.io/csiapps-r/) |
+| `v*` tag | a cut release | production apps, pinned in their `manifest.json` |
+
+Open PRs against **`staging`**, not `main`. Keeping unreleased work off `main`
+is what stops a bare `install_github()` — and the published function reference —
+from serving code that has not passed the deployed gate.
+
+`main` only ever moves by fast-forward from `staging` (`git merge --ff-only`), so
+the commit you validated on the deployed dummy app is the exact commit you tag.
+Bump `DESCRIPTION` on `staging` *before* that validation, so no code changes
+between the gate and the release.
+
+Deployed apps are pinned to a commit in their `manifest.json` and do **not**
+move when `main` does; the exposure from an unvalidated `main` is everyone's
+*next* install or deploy, plus the reference site.
 
 ## Quick start
 

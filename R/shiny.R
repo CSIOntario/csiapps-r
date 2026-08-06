@@ -113,14 +113,10 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         err   <- query$error
         err_desc <- query$error_description
 
-        #message("DEBUG query: ", session$clientData$url_search)
-
         if (!is.null(err)) {
-          #message("AUTH ERROR from provider: ", err, " - ", err_desc)
           user_token(list(error = err, error_description = err_desc))
           .set_session_token(session, NULL)
           shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
-          #return()
         }
 
         # 1) No code + no token -> redirect to CSI
@@ -146,8 +142,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
             )
           )
 
-          #message("DEBUG login_url: ", auth_url)
-          session$sendCustomMessage("csip_redirect", auth_url) # not sure what this does
+          session$sendCustomMessage("csip_redirect", auth_url)
           return()
         }
 
@@ -159,8 +154,6 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
             verifier <- decoded$v
           }
           token <- exchange_code_for_token(code, code_verifier = verifier)
-          #message("DEBUG token payload:"); utils::str(token)
-          #print(token)
           user_token(token)
         }
       })
@@ -240,10 +233,8 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       if (isTRUE(sandbox)) name_text <- paste0(name_text, " (sandbox)")
 
       tagList(
-        #br(),
         br(),
         tags$p(name_text)
-        #actionButton("logout", "Log out")
       )
     })
 
@@ -255,7 +246,6 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         .sandbox_seed_session(user_token)
       } else {
         user_token(NULL)
-        #session$reload()
         shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
       }
     })
@@ -362,8 +352,7 @@ navbar_ui <- function() {
           ),
           height = "48px",
           style = "margin-right: 8px;"
-        ),
-        #tags$span(class = "h5 mb-0", "CSIP Apps")
+        )
       )
     )
   )

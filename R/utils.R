@@ -24,10 +24,6 @@ set_institute <- function(institute = "csipacific") {
   package_state$INSTITUTE <- institute
 }
 
-clear_token <- function() {
-  Sys.unsetenv("CSIAPPS_ACCESS_TOKEN")
-}
-
 #' Function to check that required environment variables for APPS authentication are set and valid
 #'
 #' @param verbose logical; if TRUE, prints the current values of relevant environment variables (masking secrets) to the console
@@ -685,4 +681,3 @@ make_request <- function(
 }
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
-`%+%`  <- function(a, b) paste0(a, b)

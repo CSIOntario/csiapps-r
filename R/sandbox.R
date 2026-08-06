@@ -540,11 +540,6 @@ sandbox_ingest <- function(body, verbose = FALSE) {
       "no schema registered for source '%s'. Register one with register_sandbox_schema().", source_uuid))
   }
 
-  if (!requireNamespace("jsonvalidate", quietly = TRUE)) {
-    stop("csiapps sandbox: package 'jsonvalidate' is required for sandbox ingestion. ",
-         "Install it with install.packages(\"jsonvalidate\").", call. = FALSE)
-  }
-
   # Validate exactly as the API vignette does, so R-to-JSON serialization
   # quirks (auto_unbox, NA handling) are exercised faithfully
   json_schema <- jsonvalidate::json_schema$new(jsonlite::toJSON(schema, auto_unbox = TRUE))

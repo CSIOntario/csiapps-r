@@ -12,7 +12,7 @@ set_institute(institute = "csipacific")
 
 - institute:
 
-  One of "csipacific" or "csiontario"
+  One of "csipacific", "csiontario", or "csiatlantic"
 
 ## Examples
 

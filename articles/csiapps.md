@@ -71,7 +71,7 @@ as authentication redirects) by the application using
 
 ``` r
 
-# institute can be set to one of "csiontario" or "csipacific"
+# institute can be set to "csiontario", "csipacific", or "csiatlantic"
 csiapps::set_institute("csiontario")
 ```
 

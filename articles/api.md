@@ -53,7 +53,7 @@ authenticating.
 ``` r
 
 
-set_institute("csiontario") # or "csipacific" (the default)
+set_institute("csiontario") # also "csiatlantic"; "csipacific" is the default
 
 result <- make_request(
   endpoint = "api/csiauth/me/",

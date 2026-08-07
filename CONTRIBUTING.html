@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">csiapps</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,8 +42,34 @@
 
 <p>Thanks for improving <code>csiapps</code>. A few pointers:</p>
 <ul><li><p><strong>Using the package to build an app?</strong> You’re in the wrong place — see the <a href="https://csiontario.github.io/csiapps/" class="external-link">user documentation</a> (tutorials for <a href="https://csiontario.github.io/csiapps/shiny-apps/" class="external-link">Shiny</a> apps, the sandbox, and the REST API), or the <a href="https://csiontario.github.io/csiapps-r/reference/">R function reference</a>.</p></li>
-<li><p><strong>Shipping a change to the package?</strong> Follow <strong><a href="https://csiontario.github.io/csiapps/releasing/" class="external-link">Releasing csiapps</a></strong> — it is the canary→publish playbook: validate the change against the <a href="https://github.com/CSIOntario/dummy-r-shiny" class="external-link"><code>dummy-r-shiny</code></a> regression harness locally, push to a branch, re-validate on the deployed dummy app, then merge, tag, and update the docs. Open the <strong>R</strong> tab on that page.</p></li>
+<li><p><strong>Shipping a change to the package?</strong> Follow <strong><a href="https://csiontario.github.io/csiapps/releasing/" class="external-link">Releasing csiapps</a></strong> — it is the canary→publish playbook: validate the change against the <a href="https://github.com/CSIOntario/dummy-r-shiny" class="external-link"><code>dummy-r-shiny</code></a> regression harness locally, merge to <code>staging</code>, re-validate on the deployed dummy app, then fast-forward to <code>main</code>, tag, and update the docs. Open the <strong>R</strong> tab on that page.</p></li>
 </ul><div class="section level2">
+<h2 id="branches-which-ref-serves-whom">Branches: which ref serves whom<a class="anchor" aria-label="anchor" href="#branches-which-ref-serves-whom"></a></h2>
+<p>There is no CRAN or PyPI for <code>csiapps-r</code> — a git ref <em>is</em> the distribution channel, so which ref you touch decides who is affected.</p>
+<table class="table"><colgroup><col width="16%"><col width="40%"><col width="43%"></colgroup><thead><tr><th>Ref</th>
+<th>What it is</th>
+<th>Who gets it</th>
+</tr></thead><tbody><tr><td>feature branch</td>
+<td>your work in progress</td>
+<td>you</td>
+</tr><tr><td><code>staging</code></td>
+<td>integration; validated by the deployed dummy app</td>
+<td>
+<code>deploy.R</code> in <code>dummy-r-shiny</code>, by default</td>
+</tr><tr><td><code>main</code></td>
+<td>last released state</td>
+<td>bare <code>remotes::install_github("CSIOntario/csiapps-r")</code>, and the <a href="https://csiontario.github.io/csiapps-r/">pkgdown reference site</a>
+</td>
+</tr><tr><td>
+<code>v*</code> tag</td>
+<td>a cut release</td>
+<td>production apps, pinned in their <code>manifest.json</code>
+</td>
+</tr></tbody></table><p>Open PRs against <strong><code>staging</code></strong>, not <code>main</code>. Keeping unreleased work off <code>main</code> is what stops a bare <code>install_github()</code> — and the published function reference — from serving code that has not passed the deployed gate.</p>
+<p><code>main</code> only ever moves by fast-forward from <code>staging</code> (<code>git merge --ff-only</code>), so the commit you validated on the deployed dummy app is the exact commit you tag. Bump <code>DESCRIPTION</code> on <code>staging</code> <em>before</em> that validation, so no code changes between the gate and the release.</p>
+<p>Deployed apps are pinned to a commit in their <code>manifest.json</code> and do <strong>not</strong> move when <code>main</code> does; the exposure from an unvalidated <code>main</code> is everyone’s <em>next</em> install or deploy, plus the reference site.</p>
+</div>
+<div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a></h2>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/CSIOntario/csiapps-r csiapps</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/CSIOntario/dummy-r-shiny   <span class="co"># sibling checkout</span></span>

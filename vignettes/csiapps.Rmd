@@ -77,7 +77,7 @@ To migrate this app within the `CSIAPPS` ecosystem, we can leverage several func
 We specify which institute internal API calls should be made for (such as authentication redirects) by the application using `set_institute()`.
 
 ```{r set-institute}
-# institute can be set to one of "csiontario" or "csipacific"
+# institute can be set to "csiontario", "csipacific", or "csiatlantic"
 csiapps::set_institute("csiontario")
 ```
 

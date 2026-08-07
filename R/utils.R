@@ -5,6 +5,7 @@ PROFILE_ENDPOINT <- "/api/registration/profile/"
 # environment variables
 package_state <- new.env(parent = emptyenv())
 package_state$INSTITUTE <- "csipacific"
+VALID_INSTITUTES <- c("csipacific", "csiontario", "csiatlantic")
 SITE_URL <- function() paste0("https://apps.", package_state$INSTITUTE, ".ca")
 CSIAPPS_AUTH_URL <- function() paste0(SITE_URL(), "/o/authorize/")
 CSIAPPS_TOKEN_URL <- function() paste0(SITE_URL(), "/o/token/")
@@ -12,14 +13,14 @@ CSIAPPS_USERINFO_URL <- function() paste0(SITE_URL(), "/api/csiauth/me")
 
 #' Set the target institute for API calls
 #'
-#' @param institute One of "csipacific" or "csiontario"
+#' @param institute One of "csipacific", "csiontario", or "csiatlantic"
 #'
 #' @export
 #' @examples
 #' set_institute("csiontario")
 set_institute <- function(institute = "csipacific") {
   stopifnot(is.character(institute), length(institute) == 1, nzchar(institute),
-            institute %in% c("csipacific", "csiontario"))
+            institute %in% VALID_INSTITUTES)
 
   package_state$INSTITUTE <- institute
 }

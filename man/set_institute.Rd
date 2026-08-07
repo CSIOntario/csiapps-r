@@ -7,7 +7,7 @@
 set_institute(institute = "csipacific")
 }
 \arguments{
-\item{institute}{One of "csipacific" or "csiontario"}
+\item{institute}{One of "csipacific", "csiontario", or "csiatlantic"}
 }
 \description{
 Set the target institute for API calls

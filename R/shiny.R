@@ -333,6 +333,18 @@ csi_chrome_styles <- function() {
   )))
 }
 
+INSTITUTE_LOGOS <- c(
+  csipacific = "https://www.csipacific.ca/wp-content/uploads/2024/05/csi-pacific-logo-main.png",
+  csiontario = "https://csiontario.ca/wp-content/uploads/2022/03/logo-csi-ontario.png",
+  csiatlantic = "https://www.csiatlantic.ca/sites/default/files/logo-institute.png"
+)
+
+INSTITUTE_NAMES <- c(
+  csipacific = "CSI Pacific",
+  csiontario = "CSI Ontario",
+  csiatlantic = "CSI Atlantic"
+)
+
 navbar_ui <- function() {
   tags$nav(
     id = "csi-navbar",
@@ -345,11 +357,7 @@ navbar_ui <- function() {
         class = "navbar-brand d-flex align-items-center",
         href = "#",
         tags$img(
-          src = ifelse(
-            package_state$INSTITUTE == "csipacific",
-            "https://www.csipacific.ca/wp-content/uploads/2024/05/csi-pacific-logo-main.png",
-            "https://csiontario.ca/wp-content/uploads/2022/03/logo-csi-ontario.png"
-          ),
+          src = unname(INSTITUTE_LOGOS[package_state$INSTITUTE]),
           height = "48px",
           style = "margin-right: 8px;"
         )
@@ -365,7 +373,7 @@ footer_ui <- function() {
     tags$div(
       class = "d-flex flex-wrap justify-content-between align-items-center py-3 container",
       tags$p(HTML(paste0("&copy; ", format(Sys.Date(), "%Y"), " ",
-                   ifelse(package_state$INSTITUTE == "csipacific", "CSI Pacific", "CSI Ontario")
+                   unname(INSTITUTE_NAMES[package_state$INSTITUTE])
                    )), class = "col-md-4 mb-0"),
       tags$ul(class = "nav col-md-4 justify-content-end")
     )

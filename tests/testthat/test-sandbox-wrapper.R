@@ -45,6 +45,28 @@ test_that("ui_wrapper injects locked, theme-independent chrome styles", {
   expect_match(head, "border-bottom: 3px solid #d81f26 !important", fixed = TRUE)
 })
 
+test_that("Atlantic institute routes and renders correctly", {
+  original <- package_state$INSTITUTE
+  withr::defer(package_state$INSTITUTE <- original)
+
+  set_institute("csiatlantic")
+
+  expect_identical(SITE_URL(), "https://apps.csiatlantic.ca")
+  expect_identical(CSIAPPS_AUTH_URL(), "https://apps.csiatlantic.ca/o/authorize/")
+  expect_identical(CSIAPPS_TOKEN_URL(), "https://apps.csiatlantic.ca/o/token/")
+  expect_identical(CSIAPPS_USERINFO_URL(), "https://apps.csiatlantic.ca/api/csiauth/me")
+
+  html <- htmltools::renderTags(ui_wrapper(sandbox = TRUE))$html
+  expect_match(
+    html,
+    "https://www.csiatlantic.ca/sites/default/files/logo-institute.png",
+    fixed = TRUE
+  )
+  expect_match(html, "CSI Atlantic", fixed = TRUE)
+
+  expect_error(set_institute("csiquebec"))
+})
+
 # ---- server_wrapper: simulated login -----------------------------------
 
 test_that("server_wrapper returns a function in both modes", {

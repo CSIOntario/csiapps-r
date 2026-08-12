@@ -311,6 +311,14 @@ csi_chrome_styles <- function() {
     #csi-navbar .navbar-nav .nav-link {
       color: %2$s !important;
     }
+    /* Bootstrap 3 gives .navbar-brand a fixed 50px height with 15px vertical
+       padding. Let the brand box grow around the logo so the navbar border is
+       laid out below it instead of crossing the overflowing image. */
+    #csi-navbar .navbar-brand {
+      height: auto !important;
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+    }
     /* Pin the logo size. The height is set as an HTML attribute (low priority),
        so a wrapped app's own `img {}` rule (e.g. `height:auto`/`max-width:100%%`
        from a theme or Bootstrap) would otherwise resize the logo and push it

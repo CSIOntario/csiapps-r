@@ -43,6 +43,11 @@ test_that("ui_wrapper injects locked, theme-independent chrome styles", {
   # Neutral-frame theme: white bar with a CSI-red brand accent line
   expect_match(head, "background-color: #ffffff !important", fixed = TRUE)
   expect_match(head, "border-bottom: 3px solid #d81f26 !important", fixed = TRUE)
+  # Bootstrap 3's fixed 50px brand box must not let the 48px logo overflow
+  # through the navbar's bottom border.
+  expect_match(head, "height: auto !important", fixed = TRUE)
+  expect_match(head, "padding-top: 8px !important", fixed = TRUE)
+  expect_match(head, "padding-bottom: 8px !important", fixed = TRUE)
 })
 
 test_that("Atlantic institute routes and renders correctly", {

@@ -681,4 +681,108 @@ make_request <- function(
   }
 }
 
+#' Fetch the current AMS athlete mapping
+#'
+#' Fetches an AMS mapping data source and returns only its current four-column
+#' mapping. In sandbox mode, the source is expected to contain the already-current
+#' mapping and its four data fields are returned directly. In production, the
+#' append-only warehouse history is reduced to the most recent record for each
+#' mapping identity, and identities whose latest record is inactive are removed.
+#'
+#' @param source_uuid Character. AMS mapping data-source identifier. Defaults to
+#'   the `AMS_MAPPING_UUID` environment variable.
+#' @param token Character. Authentication token. When not supplied, it is
+#'   resolved in the same way as [make_request()]. Ignored in sandbox mode.
+#' @param sandbox Logical. Route to the local sandbox (`TRUE`) or production
+#'   (`FALSE`). Defaults to [is_sandbox_mode()].
+#' @param max_pages Maximum number of production response pages to fetch.
+#'
+#' @return A data frame with columns `id`, `vendor`, `vendor_profile_id`, and
+#'   `vendor_profile_name`, containing one row per current mapping.
+#' @export
+#' @examples
+#' \dontrun{
+#' mapping <- fetch_ams_mapping()
+#' }
+fetch_ams_mapping <- function(
+    source_uuid = Sys.getenv("AMS_MAPPING_UUID"),
+    token = NULL,
+    sandbox = is_sandbox_mode(),
+    max_pages = 50
+  ) {
+  if (!is.character(source_uuid) || length(source_uuid) != 1 || !nzchar(trimws(source_uuid))) {
+    stop("fetch_ams_mapping: pass `source_uuid` or set AMS_MAPPING_UUID.", call. = FALSE)
+  }
+  source_uuid <- trimws(source_uuid)
+
+  out_cols <- c("id", "vendor", "vendor_profile_id", "vendor_profile_name")
+  empty <- data.frame(
+    id = character(),
+    vendor = character(),
+    vendor_profile_id = character(),
+    vendor_profile_name = character(),
+    stringsAsFactors = FALSE
+  )
+  pages <- make_request(
+    endpoint = "api/warehouse/data-records",
+    query = list(source_uuid = source_uuid),
+    token = token,
+    paginate = TRUE,
+    max_pages = max_pages,
+    sandbox = sandbox
+  )
+  records <- unlist(lapply(pages, function(page) page$results %||% list()),
+                    recursive = FALSE, use.names = FALSE)
+  if (!length(records)) return(empty)
+
+  rows <- lapply(seq_along(records), function(i) {
+    rec <- records[[i]]
+    data <- rec$data
+    missing <- out_cols[vapply(out_cols, function(col) {
+      !is.list(data) || is.null(data[[col]]) || length(data[[col]]) != 1
+    }, logical(1))]
+    if (length(missing)) {
+      stop(sprintf("fetch_ams_mapping: record %d is missing core field(s): %s.",
+                   i, paste(missing, collapse = ", ")), call. = FALSE)
+    }
+
+    row <- data.frame(
+      id = data$id,
+      vendor = as.character(data$vendor),
+      vendor_profile_id = as.character(data$vendor_profile_id),
+      vendor_profile_name = as.character(data$vendor_profile_name),
+      stringsAsFactors = FALSE
+    )
+    if (!isTRUE(sandbox)) {
+      active <- data$active
+      if (is.null(active) || !length(active) || is.na(active[[1]])) {
+        active <- TRUE
+      } else if (is.logical(active)) {
+        active <- isTRUE(active[[1]])
+      } else {
+        value <- toupper(trimws(as.character(active[[1]])))
+        active <- !value %in% c("FALSE", "F", "0", "NO", "N")
+      }
+      row$.active <- active
+      row$.updated_at <- as.character(rec$updated_at %||% "")
+      row$.record_id <- as.character(rec$id %||% "")
+      row$.position <- i
+    }
+    row
+  })
+  mapping <- do.call(rbind, rows)
+  rownames(mapping) <- NULL
+
+  if (isTRUE(sandbox)) return(mapping[, out_cols, drop = FALSE])
+
+  numeric_id <- suppressWarnings(as.numeric(mapping$.record_id))
+  numeric_id[is.na(numeric_id)] <- -Inf
+  mapping <- mapping[order(mapping$.updated_at, numeric_id, mapping$.record_id,
+                           mapping$.position, na.last = TRUE), , drop = FALSE]
+  latest <- !duplicated(mapping[, out_cols, drop = FALSE], fromLast = TRUE)
+  mapping <- mapping[latest & mapping$.active, out_cols, drop = FALSE]
+  rownames(mapping) <- NULL
+  mapping
+}
+
 `%||%` <- function(a, b) if (!is.null(a)) a else b

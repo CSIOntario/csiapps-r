@@ -28,6 +28,7 @@ reference:
     Functions for interfacing with the CSIAPPS REST API.
   contents:
   - make_request
+  - fetch_ams_mapping
   - fetch_org_options
   - fetch_profiles
   - fetch_profile

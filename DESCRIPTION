@@ -1,6 +1,6 @@
 Package: csiapps
 Title: Helper functions for CSIAPPS
-Version: 0.1.8
+Version: 0.1.9
 Authors@R: c(
     person("David", "Awosoga", , "dawosoga@csiontario.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2741-5770")),

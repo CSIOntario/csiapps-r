@@ -12,7 +12,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/CSIOntario/csiapps-r/blob/v0.1.9/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/CSIOntario/csiapps-r/blob/main/DESCRIPTION)
 
 Awosoga D, Shim K (2026). *csiapps: Helper functions for CSIAPPS*. R
 package version 0.1.9, <https://github.com/CSIOntario/csiapps-r>.

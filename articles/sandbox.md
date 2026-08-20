@@ -633,13 +633,22 @@ make_request(
 
 ### 5. Fetch the current mapping and join your vendor data
 
-This is the only part that ships to production.
+Set `AMS_MAPPING_UUID` to the UUID of the AMS mapping data source before
+calling
+[`fetch_ams_mapping()`](https://csiontario.github.io/csiapps-r/reference/fetch_ams_mapping.md).
+The function uses this environment variable when `source_uuid` is not
+supplied and returns `id`, `vendor`, `vendor_profile_id`, and
+`vendor_profile_name`. It stops with a clear error if the UUID is
+missing or empty.
+
+In production,
 [`fetch_ams_mapping()`](https://csiontario.github.io/csiapps-r/reference/fetch_ams_mapping.md)
-returns the same four columns in both modes. Filter to your vendor, then
+fetches the data-source records and flattens and cleans the warehouse
+response so the result contains the most up-to-date mapping. In sandbox
+mode, it returns the four columns you ingested directly. Filter the
+result to your vendor, then
 [`merge()`](https://rdrr.io/r/base/merge.html) your real vendor data
-onto the mapping by `vendor_profile_id` — every matched measurement now
-carries a canonical CSIAPPS `id`, which you can enrich with
-[`fetch_profile()`](https://csiontario.github.io/csiapps-r/reference/fetch_profile.md):
+onto the mapping by `vendor_profile_id`:
 
 ``` r
 
@@ -661,24 +670,12 @@ joined$athlete <- vapply(joined$id, function(i) {
 joined # vendor_profile_id | resting_hr | id | vendor | vendor_profile_name | athlete
 ```
 
-> **How production history becomes the current mapping.** AMS_mapping is
-> append-only in production: corrections and deletions append records
-> rather than changing old ones.
-> [`fetch_ams_mapping()`](https://csiontario.github.io/csiapps-r/reference/fetch_ams_mapping.md)
-> follows pagination up to `max_pages`, selects the latest record for
-> each `(id, vendor, vendor_profile_id, vendor_profile_name)` identity
-> using `updated_at` and the warehouse record id, treats a missing
-> legacy `active` value as active, and drops identities whose latest
-> record is inactive. The sandbox skips this reduction because its
-> four-column data already represents the current mapping.
-
 ### Going to production
 
-Disable sandbox mode and let CSIAPPS set `AMS_MAPPING_UUID` to the real
-AMS_mapping source uuid. Steps 1–4 fall away entirely — the real
-AMS_mapping source is already populated upstream — and the step 5
-read-and-join runs **unchanged**. The helper now reduces the production
-response to the same four-column shape used locally.
+Disable sandbox mode and ensure `AMS_MAPPING_UUID` contains the real AMS
+mapping data-source UUID. The same
+[`fetch_ams_mapping()`](https://csiontario.github.io/csiapps-r/reference/fetch_ams_mapping.md)
+call will then return the cleaned, current production mapping.
 
 ## Limitations
 

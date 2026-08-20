@@ -66,7 +66,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Sandbox Mode</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/CSIOntario/csiapps-r/blob/v0.1.9/vignettes/sandbox.Rmd" class="external-link"><code>vignettes/sandbox.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/CSIOntario/csiapps-r/blob/main/vignettes/sandbox.Rmd" class="external-link"><code>vignettes/sandbox.Rmd</code></a></small>
       <div class="d-none name"><code>sandbox.Rmd</code></div>
     </div>
 
@@ -662,12 +662,18 @@ each mapping links to its CSIAPPS athlete:</p>
 <div class="section level3">
 <h3 id="fetch-the-current-mapping-and-join-your-vendor-data">5. Fetch the current mapping and join your vendor data<a class="anchor" aria-label="anchor" href="#fetch-the-current-mapping-and-join-your-vendor-data"></a>
 </h3>
-<p>This is the only part that ships to production.
-<code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> returns the same four columns in both
-modes. Filter to your vendor, then <code><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge()</a></code> your real vendor
-data onto the mapping by <code>vendor_profile_id</code> — every matched
-measurement now carries a canonical CSIAPPS <code>id</code>, which you
-can enrich with <code><a href="../reference/fetch_profile.html">fetch_profile()</a></code>:</p>
+<p>Set <code>AMS_MAPPING_UUID</code> to the UUID of the AMS mapping data
+source before calling <code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code>. The function
+uses this environment variable when <code>source_uuid</code> is not
+supplied and returns <code>id</code>, <code>vendor</code>,
+<code>vendor_profile_id</code>, and <code>vendor_profile_name</code>. It
+stops with a clear error if the UUID is missing or empty.</p>
+<p>In production, <code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> fetches the
+data-source records and flattens and cleans the warehouse response so
+the result contains the most up-to-date mapping. In sandbox mode, it
+returns the four columns you ingested directly. Filter the result to
+your vendor, then <code><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge()</a></code> your real vendor data onto the
+mapping by <code>vendor_profile_id</code>:</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="va">mapping</span><span class="op">[</span><span class="va">mapping</span><span class="op">$</span><span class="va">vendor</span> <span class="op">==</span> <span class="st">"VendorX"</span>, <span class="op">]</span></span>
@@ -685,29 +691,14 @@ can enrich with <code><a href="../reference/fetch_profile.html">fetch_profile()<
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">p</span><span class="op">$</span><span class="va">person</span><span class="op">$</span><span class="va">first_name</span>, <span class="va">p</span><span class="op">$</span><span class="va">person</span><span class="op">$</span><span class="va">last_name</span><span class="op">)</span></span>
 <span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">joined</span> <span class="co"># vendor_profile_id | resting_hr | id | vendor | vendor_profile_name | athlete</span></span></code></pre></div>
-<blockquote>
-<p><strong>How production history becomes the current mapping.</strong>
-AMS_mapping is append-only in production: corrections and deletions
-append records rather than changing old ones.
-<code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> follows pagination up to
-<code>max_pages</code>, selects the latest record for each
-<code>(id, vendor, vendor_profile_id, vendor_profile_name)</code>
-identity using <code>updated_at</code> and the warehouse record id,
-treats a missing legacy <code>active</code> value as active, and drops
-identities whose latest record is inactive. The sandbox skips this
-reduction because its four-column data already represents the current
-mapping.</p>
-</blockquote>
 </div>
 <div class="section level3">
 <h3 id="going-to-production">Going to production<a class="anchor" aria-label="anchor" href="#going-to-production"></a>
 </h3>
-<p>Disable sandbox mode and let CSIAPPS set
-<code>AMS_MAPPING_UUID</code> to the real AMS_mapping source uuid. Steps
-1–4 fall away entirely — the real AMS_mapping source is already
-populated upstream — and the step 5 read-and-join runs
-<strong>unchanged</strong>. The helper now reduces the production
-response to the same four-column shape used locally.</p>
+<p>Disable sandbox mode and ensure <code>AMS_MAPPING_UUID</code>
+contains the real AMS mapping data-source UUID. The same
+<code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> call will then return the cleaned,
+current production mapping.</p>
 </div>
 </div>
 <div class="section level2">

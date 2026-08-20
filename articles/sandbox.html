@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">csiapps</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.8</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -66,7 +66,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Sandbox Mode</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/CSIOntario/csiapps-r/blob/v0.1.8/vignettes/sandbox.Rmd" class="external-link"><code>vignettes/sandbox.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/CSIOntario/csiapps-r/blob/main/vignettes/sandbox.Rmd" class="external-link"><code>vignettes/sandbox.Rmd</code></a></small>
       <div class="d-none name"><code>sandbox.Rmd</code></div>
     </div>
 
@@ -552,13 +552,12 @@ source whose records link each CSIAPPS athlete (<code>id</code>) to that
 athlete’s profile in a vendor system (<code>vendor_profile_id</code>,
 <code>vendor_profile_name</code>). A consumer app reads AMS_mapping to
 translate the vendor’s own ids into canonical CSIAPPS athlete ids.</p>
-<p>In production the mapping already lives in the warehouse. To build
-and test the consumer <strong>locally</strong>, you reproduce a
-miniature AMS_mapping source in the sandbox: create dummy athletes,
-author a small mapping CSV whose <code>id</code> column matches those
-dummy athletes and whose <code>vendor_profile_id</code> column matches
-your <strong>real</strong> vendor ids, ingest it under the AMS_mapping
-schema, then read it back and join — exactly as production will.</p>
+<p>In production the warehouse stores append-only mapping history and
+response metadata. Consumer apps need only the current four-column
+mapping, so <code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> hides that difference: in
+the sandbox it returns the simple current mapping you ingest; in
+production it flattens the full response, keeps the latest record per
+mapping identity, and removes inactive mappings.</p>
 <blockquote>
 <p>Steps 1–4 below (dummy athletes, schema registration, CSV ingestion)
 are <strong>development-only scaffolding</strong>. In production the
@@ -596,8 +595,8 @@ use any placeholder in development.</p>
 athlete id (matching the dummy profiles above), and
 <code>vendor_profile_id</code> is the athlete’s id in
 <strong>your</strong> vendor system — a real value from your data (a
-code, integer, or UUID). Keep every base mapping
-<code>active = TRUE</code>.</p>
+code, integer, or UUID). The sandbox CSV needs only the four columns
+that consumer apps use.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mapping_csv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".csv"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span></span>
@@ -606,7 +605,6 @@ code, integer, or UUID). Keep every base mapping
 <span>    vendor              <span class="op">=</span> <span class="st">"VendorX"</span>,</span>
 <span>    vendor_profile_id   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"VX-8841"</span>, <span class="st">"VX-8842"</span>, <span class="st">"VX-9001"</span><span class="op">)</span>, <span class="co"># your real vendor ids</span></span>
 <span>    vendor_profile_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Ada N."</span>, <span class="st">"Blair O."</span>, <span class="st">"Cai Z."</span><span class="op">)</span>,</span>
-<span>    active              <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>    stringsAsFactors    <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="va">mapping_csv</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -615,32 +613,40 @@ code, integer, or UUID). Keep every base mapping
 <div class="section level3">
 <h3 id="register-the-ams_mapping-schema">3. Register the AMS_mapping schema<a class="anchor" aria-label="anchor" href="#register-the-ams_mapping-schema"></a>
 </h3>
-<p>Register the AMS_mapping JSON schema under your placeholder source.
-<code><a href="../reference/register_sandbox_schema.html">register_sandbox_schema()</a></code> accepts a path to the
-<code>.schema.json</code> file (or a JSON string / R list):</p>
+<p>Register a development-only schema containing just the current
+mapping fields. The sandbox does not need the production warehouse’s
+<code>active</code> history or response metadata:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/register_sandbox_schema.html">register_sandbox_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"AMS_MAPPING_UUID"</span><span class="op">)</span>, <span class="st">"mapping.schema.json"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">mapping_schema</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  type <span class="op">=</span> <span class="st">"object"</span>,</span>
+<span>  additionalProperties <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  required <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"vendor"</span>, <span class="st">"vendor_profile_id"</span>, <span class="st">"vendor_profile_name"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  properties <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    id                  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"number"</span><span class="op">)</span>,</span>
+<span>    vendor              <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"string"</span><span class="op">)</span>,</span>
+<span>    vendor_profile_id   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"string"</span><span class="op">)</span>,</span>
+<span>    vendor_profile_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"string"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/register_sandbox_schema.html">register_sandbox_schema</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"AMS_MAPPING_UUID"</span><span class="op">)</span>, <span class="va">mapping_schema</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="ingest-the-csv-into-the-sandbox-warehouse">4. Ingest the CSV into the sandbox warehouse<a class="anchor" aria-label="anchor" href="#ingest-the-csv-into-the-sandbox-warehouse"></a>
 </h3>
 <p>Read the CSV back into records — forcing
 <code>vendor_profile_id</code> to stay a <strong>string</strong> (vendor
-id formats vary) and <code>active</code> to a logical — then ingest with
-<code>subject_field = "id"</code> so each mapping links to its CSIAPPS
-athlete:</p>
+id formats vary) — then ingest with <code>subject_field = "id"</code> so
+each mapping links to its CSIAPPS athlete:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="va">mapping_csv</span>,</span>
 <span>                colClasses       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>vendor_profile_id <span class="op">=</span> <span class="st">"character"</span><span class="op">)</span>,</span>
 <span>                stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="va">raw</span><span class="op">$</span><span class="va">active</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">as.logical</a></span><span class="op">(</span><span class="va">raw</span><span class="op">$</span><span class="va">active</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  id                  <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>,</span>
 <span>  vendor              <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">vendor</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>,</span>
 <span>  vendor_profile_id   <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">vendor_profile_id</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>,</span>
-<span>  vendor_profile_name <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">vendor_profile_name</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>,</span>
-<span>  active              <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">active</span><span class="op">[</span><span class="va">i</span><span class="op">]</span></span>
+<span>  vendor_profile_name <span class="op">=</span> <span class="va">raw</span><span class="op">$</span><span class="va">vendor_profile_name</span><span class="op">[</span><span class="va">i</span><span class="op">]</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
@@ -654,27 +660,17 @@ athlete:</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="read-the-mapping-back-and-join-your-vendor-data">5. Read the mapping back and join your vendor data<a class="anchor" aria-label="anchor" href="#read-the-mapping-back-and-join-your-vendor-data"></a>
+<h3 id="fetch-the-current-mapping-and-join-your-vendor-data">5. Fetch the current mapping and join your vendor data<a class="anchor" aria-label="anchor" href="#fetch-the-current-mapping-and-join-your-vendor-data"></a>
 </h3>
-<p>This is the only part that ships to production. Pull the AMS_mapping
-records, keep the active ones, and <code><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge()</a></code> your real vendor
-data onto them by <code>vendor_profile_id</code> — every vendor
+<p>This is the only part that ships to production.
+<code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> returns the same four columns in both
+modes. Filter to your vendor, then <code><a href="https://rdrr.io/r/base/merge.html" class="external-link">merge()</a></code> your real vendor
+data onto the mapping by <code>vendor_profile_id</code> — every matched
 measurement now carries a canonical CSIAPPS <code>id</code>, which you
 can enrich with <code><a href="../reference/fetch_profile.html">fetch_profile()</a></code>:</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">resp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/make_request.html">make_request</a></span><span class="op">(</span></span>
-<span>  endpoint <span class="op">=</span> <span class="st">"api/warehouse/data-records"</span>,</span>
-<span>  query    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>source_uuid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getenv.html" class="external-link">Sys.getenv</a></span><span class="op">(</span><span class="st">"AMS_MAPPING_UUID"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  paginate <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">resp</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">results</span>, <span class="kw">function</span><span class="op">(</span><span class="va">r</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  id                <span class="op">=</span> <span class="va">r</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">id</span>,</span>
-<span>  vendor_profile_id <span class="op">=</span> <span class="va">r</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">vendor_profile_id</span>,</span>
-<span>  active            <span class="op">=</span> <span class="va">r</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">active</span>,</span>
-<span>  stringsAsFactors  <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="va">mapping</span><span class="op">[</span><span class="va">mapping</span><span class="op">$</span><span class="va">active</span>, <span class="op">]</span> <span class="co"># consumers keep only active mappings</span></span>
+<code class="sourceCode R"><span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">mapping</span> <span class="op">&lt;-</span> <span class="va">mapping</span><span class="op">[</span><span class="va">mapping</span><span class="op">$</span><span class="va">vendor</span> <span class="op">==</span> <span class="st">"VendorX"</span>, <span class="op">]</span></span>
 <span></span>
 <span><span class="co"># your REAL third-party data, keyed by the vendor's own id</span></span>
 <span><span class="va">vendor_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -688,22 +684,19 @@ can enrich with <code><a href="../reference/fetch_profile.html">fetch_profile()<
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fetch_profile.html">fetch_profile</a></span><span class="op">(</span>profile_id <span class="op">=</span> <span class="va">i</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">p</span><span class="op">$</span><span class="va">person</span><span class="op">$</span><span class="va">first_name</span>, <span class="va">p</span><span class="op">$</span><span class="va">person</span><span class="op">$</span><span class="va">last_name</span><span class="op">)</span></span>
 <span><span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">joined</span> <span class="co"># vendor_profile_id | resting_hr | id | active | athlete</span></span></code></pre></div>
+<span><span class="va">joined</span> <span class="co"># vendor_profile_id | resting_hr | id | vendor | vendor_profile_name | athlete</span></span></code></pre></div>
 <blockquote>
-<p><strong>The <code>active</code> flag and append-only
-history.</strong> AMS_mapping is append-only: a mapping is corrected or
-removed by appending a new record — a tombstone with
-<code>active = FALSE</code>, plus any corrected record — and the most
-recent record per
-<code>(id, vendor, vendor_profile_id, vendor_profile_name)</code> wins.
-In <strong>production</strong> the warehouse returns only
-currently-active mappings (filtered server-side). The <strong>sandbox
-returns every record you ingest</strong>, unfiltered — so if you ingest
-corrections while testing, reduce to the latest record per identity and
-keep the active ones yourself to mirror what production returns:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">identity</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span><span class="va">mapping</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">id</span>, <span class="va">vendor_profile_id</span><span class="op">)</span><span class="op">)</span> <span class="co"># add vendor + name for the full key</span></span>
-<span><span class="va">mapping</span>  <span class="op">&lt;-</span> <span class="va">mapping</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="va">identity</span>, fromLast <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">mapping</span><span class="op">$</span><span class="va">active</span>, <span class="op">]</span></span></code></pre></div>
+<p><strong>How production history becomes the current mapping.</strong>
+AMS_mapping is append-only in production: corrections and deletions
+append records rather than changing old ones.
+<code><a href="../reference/fetch_ams_mapping.html">fetch_ams_mapping()</a></code> follows pagination up to
+<code>max_pages</code>, selects the latest record for each
+<code>(id, vendor, vendor_profile_id, vendor_profile_name)</code>
+identity using <code>updated_at</code> and the warehouse record id,
+treats a missing legacy <code>active</code> value as active, and drops
+identities whose latest record is inactive. The sandbox skips this
+reduction because its four-column data already represents the current
+mapping.</p>
 </blockquote>
 </div>
 <div class="section level3">
@@ -713,8 +706,8 @@ keep the active ones yourself to mirror what production returns:</p>
 <code>AMS_MAPPING_UUID</code> to the real AMS_mapping source uuid. Steps
 1–4 fall away entirely — the real AMS_mapping source is already
 populated upstream — and the step 5 read-and-join runs
-<strong>unchanged</strong>, now returning server-filtered active
-mappings whose subjects resolve against real registrations.</p>
+<strong>unchanged</strong>. The helper now reduces the production
+response to the same four-column shape used locally.</p>
 </div>
 </div>
 <div class="section level2">

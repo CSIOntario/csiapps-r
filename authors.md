@@ -12,15 +12,15 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/CSIOntario/csiapps-r/blob/v0.1.8/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/CSIOntario/csiapps-r/blob/main/DESCRIPTION)
 
 Awosoga D, Shim K (2026). *csiapps: Helper functions for CSIAPPS*. R
-package version 0.1.8, <https://github.com/CSIOntario/csiapps-r>.
+package version 0.1.9, <https://github.com/CSIOntario/csiapps-r>.
 
     @Manual{,
       title = {csiapps: Helper functions for CSIAPPS},
       author = {David Awosoga and Kyu Min Shim},
       year = {2026},
-      note = {R package version 0.1.8},
+      note = {R package version 0.1.9},
       url = {https://github.com/CSIOntario/csiapps-r},
     }

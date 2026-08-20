@@ -29,6 +29,11 @@ Cloud that pin lives in the app’s `manifest.json` as a commit SHA. See
 Please refer to `vignette("csiapps")` and `vignette("api")` for more
 information on how to use this library.
 
+Interactive Quarto HTML documents and dashboards use `quarto_setup()`
+together with the language-neutral `csiapps-quarto` extension. See the
+[Quarto guide](https://csiontario.github.io/csiapps/quarto-docs/) for CSI
+login, snapshot components, and Connect Cloud deployment.
+
 `csiapps` is also available for Python. The [cross-language
 documentation](https://csiontario.github.io/csiapps/) shows R and Python
 usage side by side and includes a [parity

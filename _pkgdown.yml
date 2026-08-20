@@ -23,6 +23,11 @@ reference:
   - global_wrapper
   - check_secrets
   - set_institute
+- subtitle: Quarto
+  desc: |
+    Functions for authenticated interactive Quarto documents.
+  contents:
+  - quarto_setup
 - subtitle: REST API
   desc: |
     Functions for interfacing with the CSIAPPS REST API.

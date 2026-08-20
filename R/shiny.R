@@ -116,7 +116,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         if (!is.null(err)) {
           user_token(list(error = err, error_description = err_desc))
           .set_session_token(session, NULL)
-          shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+          .redirect_current(session)
         }
 
         # 1) No code + no token -> redirect to CSI
@@ -172,7 +172,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
       # Bail if token exchange failed
       if (is.null(tok) || !is.null(tok$error)) {
-        shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+        .redirect_current(session)
         return()
       }
 
@@ -246,7 +246,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
         .sandbox_seed_session(user_token)
       } else {
         user_token(NULL)
-        shinyjs::runjs("window.location.href = window.location.pathname;") # good enough fix
+        .redirect_current(session)
       }
     })
 
@@ -257,6 +257,13 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
     app_specific_logic(input, output, session)
 
   }
+}
+
+.redirect_current <- function(session) {
+  path <- shiny::isolate(session$clientData$url_pathname)
+  if (is.null(path) || !nzchar(path)) path <- "/"
+  session$sendCustomMessage("csip_redirect", path)
+  invisible(path)
 }
 
 # -------------------------------------------------------------------

@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Helper functions and utilities for CSI data warehouse ingestion and shiny web applications.
+Helper functions and utilities for CSI data warehouse ingestion, Shiny web applications, and authenticated interactive Quarto documents.
 }
 \seealso{
 Useful links:

@@ -4,7 +4,11 @@
 \alias{server_wrapper}
 \title{Wrapper server function for Shiny apps}
 \usage{
-server_wrapper(app_specific_logic, sandbox = is_sandbox_mode())
+server_wrapper(
+  app_specific_logic,
+  sandbox = is_sandbox_mode(),
+  pause_on_logout = FALSE
+)
 }
 \arguments{
 \item{app_specific_logic}{Existing server logic of shiny web application}
@@ -16,6 +20,11 @@ shell renders with an unauthenticated notice. Defaults to \code{\link[=is_sandbo
 which is \strong{TRUE by default}. Disable it for deployment with
 \code{options(csiapps.sandbox = FALSE)} (or \code{CSIAPPS_ENV=production}) to use the
 real login flow. See \link{csiapps-sandbox} for details and limitations.}
+
+\item{pause_on_logout}{If \code{TRUE}, logout clears the session without starting
+authentication again. This is used by authenticated Quarto documents so an
+existing CSI SSO session does not immediately log the viewer back in.
+Defaults to \code{FALSE} for compatibility with existing Shiny apps.}
 }
 \value{
 A Shiny server function that wraps the provided app-specific logic with authentication handling and user info retrieval.

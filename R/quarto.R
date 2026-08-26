@@ -52,6 +52,10 @@ quarto_setup <- function(
     })
   }
 
-  server_wrapper(initialize, sandbox = sandbox)(session$input, session$output, session)
+  server_wrapper(
+    initialize,
+    sandbox = sandbox,
+    pause_on_logout = TRUE
+  )(session$input, session$output, session)
   invisible(NULL)
 }

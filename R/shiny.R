@@ -77,10 +77,18 @@ ui_wrapper <- function(..., sandbox = is_sandbox_mode()) {
 #' which is **TRUE by default**. Disable it for deployment with
 #' `options(csiapps.sandbox = FALSE)` (or `CSIAPPS_ENV=production`) to use the
 #' real login flow. See [csiapps-sandbox] for details and limitations.
+#' @param pause_on_logout If `TRUE`, logout clears the session without starting
+#'   authentication again. This is used by authenticated Quarto documents so an
+#'   existing CSI SSO session does not immediately log the viewer back in.
+#'   Defaults to `FALSE` for compatibility with existing Shiny apps.
 #'
 #' @return A Shiny server function that wraps the provided app-specific logic with authentication handling and user info retrieval.
 #' @export
-server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
+server_wrapper <- function(
+    app_specific_logic,
+    sandbox = is_sandbox_mode(),
+    pause_on_logout = FALSE
+  ) {
 
   function(input, output, session) {
 
@@ -93,6 +101,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
     user_token <- reactiveVal(NULL)
     userinfo   <- reactiveVal(NULL)
+    logged_out <- reactiveVal(FALSE)
 
     if (isTRUE(sandbox)) {
 
@@ -107,6 +116,7 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
       # ---------------- CSI OAuth2 PKCE flow ----------------
 
       observe({
+        if (isTRUE(logged_out())) return()
         query <- parseQueryString(session$clientData$url_search)
         code  <- query$code
         state <- query$state
@@ -208,6 +218,10 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
 
     # Auth status UI: first/last name + logout
     output$auth_status <- renderUI({
+      if (isTRUE(logged_out())) {
+        return(tags$p("Signed out. Select Sign in to continue."))
+      }
+
       tok <- user_token()
 
       if (is.null(tok)) {
@@ -241,7 +255,11 @@ server_wrapper <- function(app_specific_logic, sandbox = is_sandbox_mode()) {
     observeEvent(input$logout, {
       userinfo(NULL)
       .set_session_token(session, NULL)
-      if (isTRUE(sandbox)) {
+      if (isTRUE(pause_on_logout)) {
+        logged_out(TRUE)
+        user_token(NULL)
+        session$sendCustomMessage("csiapps_quarto_signed_out", list())
+      } else if (isTRUE(sandbox)) {
         # No IdP to redirect to; re-seed the simulated session instead
         .sandbox_seed_session(user_token)
       } else {

@@ -42,6 +42,11 @@ test_that("quarto_setup reveals sandbox reports without contacting CSI", {
     session$flushReact()
     expect_false(shiny::isolate(token_ready()))
     expect_true(session$userData$csiapps_quarto_initialized)
+
+    session$setInputs(logout = 1)
+    session$flushReact()
+    expect_false(shiny::isolate(token_ready()))
+    expect_match(output$auth_status$html, "Signed out")
   }))
 })
 

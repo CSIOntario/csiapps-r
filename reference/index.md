@@ -20,6 +20,13 @@ Functions for developing Shiny web applications.
 - [`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
   : Set the target institute for API calls
 
+### Quarto
+
+Functions for authenticated interactive Quarto documents.
+
+- [`quarto_setup()`](https://csiontario.github.io/csiapps-r/reference/quarto_setup.md)
+  : Add CSI authentication to an interactive Quarto document
+
 ### REST API
 
 Functions for interfacing with the CSIAPPS REST API.

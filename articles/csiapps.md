@@ -13,7 +13,7 @@ sandbox mode is turned off:
   CSIAPPS.
 - `CSIAPPS_CLIENT_SECRET`: The client secret for the application
   registered in CSIAPPS.
-- `CSIAPPS_REDIRECT_URL`: The URL to which the application will redirect
+- `CSIAPPS_REDIRECT_URI`: The URL to which the application will redirect
   after authentication.
 - `CSIAPPS_SCOPE`: (optional) The scope of the authentication request.
 

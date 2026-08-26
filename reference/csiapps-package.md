@@ -1,7 +1,7 @@
 # csiapps: Helper functions for CSIAPPS
 
-Helper functions and utilities for CSI data warehouse ingestion and
-shiny web applications.
+Helper functions and utilities for CSI data warehouse ingestion, Shiny
+web applications, and authenticated interactive Quarto documents.
 
 ## See also
 

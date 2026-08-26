@@ -27,6 +27,13 @@ and
 [`vignette("api")`](https://csiontario.github.io/csiapps-r/articles/api.md)
 for more information on how to use this library.
 
+Interactive Quarto HTML documents and dashboards use
+[`quarto_setup()`](https://csiontario.github.io/csiapps-r/reference/quarto_setup.md)
+in Quarto’s standard `server.R` together with the language-neutral
+`csiapps-quarto` extension. See the [Quarto
+guide](https://csiontario.github.io/csiapps/quarto-docs/) for CSI login,
+protected delivery, and Connect Cloud deployment.
+
 `csiapps` is also available for Python. The [cross-language
 documentation](https://csiontario.github.io/csiapps/) shows R and Python
 usage side by side and includes a [parity
@@ -64,6 +71,13 @@ Functions for developing Shiny web applications.
   authentication are set and valid
 - [`set_institute()`](https://csiontario.github.io/csiapps-r/reference/set_institute.md)
   : Set the target institute for API calls
+
+### Quarto
+
+Functions for authenticated interactive Quarto documents.
+
+- [`quarto_setup()`](https://csiontario.github.io/csiapps-r/reference/quarto_setup.md)
+  : Add CSI authentication to an interactive Quarto document
 
 ### REST API
 

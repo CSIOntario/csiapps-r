@@ -6,7 +6,11 @@ tokens and info, and providing a consistent authentication status UI.
 ## Usage
 
 ``` r
-server_wrapper(app_specific_logic, sandbox = is_sandbox_mode())
+server_wrapper(
+  app_specific_logic,
+  sandbox = is_sandbox_mode(),
+  pause_on_logout = FALSE
+)
 ```
 
 ## Arguments
@@ -27,6 +31,13 @@ server_wrapper(app_specific_logic, sandbox = is_sandbox_mode())
   use the real login flow. See
   [csiapps-sandbox](https://csiontario.github.io/csiapps-r/reference/csiapps-sandbox.md)
   for details and limitations.
+
+- pause_on_logout:
+
+  If `TRUE`, logout clears the session without starting authentication
+  again. This is used by authenticated Quarto documents so an existing
+  CSI SSO session does not immediately log the viewer back in. Defaults
+  to `FALSE` for compatibility with existing Shiny apps.
 
 ## Value
 

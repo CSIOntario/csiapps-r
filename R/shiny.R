@@ -126,7 +126,7 @@ server_wrapper <- function(
         if (!is.null(err)) {
           user_token(list(error = err, error_description = err_desc))
           .set_session_token(session, NULL)
-          .redirect_current(session)
+          return()
         }
 
         # 1) No code + no token -> redirect to CSI
@@ -137,7 +137,7 @@ server_wrapper <- function(
           csi_client <- httr2::oauth_client(
             id        = Sys.getenv("CSIAPPS_CLIENT_ID"),
             token_url = CSIAPPS_TOKEN_URL(),
-            secret    = Sys.getenv("CSIAPPS_CLIENT_SECRET")
+            secret    = if (nzchar(Sys.getenv("CSIAPPS_CLIENT_SECRET"))) Sys.getenv("CSIAPPS_CLIENT_SECRET") else NULL
           )
 
           auth_url <- httr2::oauth_flow_auth_code_url(
@@ -163,14 +163,17 @@ server_wrapper <- function(
             decoded <- pkce_state_decode(state)
             verifier <- decoded$v
           }
-          token <- exchange_code_for_token(code, code_verifier = verifier)
+          token <- tryCatch(exchange_code_for_token(code, code_verifier = verifier), error = function(e) {
+            message("[csiapps] token exchange failed: ", conditionMessage(e))
+            list(error = "token_exchange_failed")
+          })
           user_token(token)
         }
       })
 
     }
 
-    # Load /me and update global access token when we get a token.
+    # Load /me after a token becomes available for this session.
     # Shared by the production and sandbox paths: in sandbox the token is the
     # developer's own and is used only to load the real `/me` identity; all
     # other data (orgs, athletes, warehouse) is served from the local sandbox.
@@ -181,10 +184,7 @@ server_wrapper <- function(
       .set_session_token(session, NULL)
 
       # Bail if token exchange failed
-      if (is.null(tok) || !is.null(tok$error)) {
-        .redirect_current(session)
-        return()
-      }
+      if (is.null(tok) || !is.null(tok$error)) return()
 
       access_token <- tok$access_token
 
@@ -194,6 +194,7 @@ server_wrapper <- function(
       #    cross-user leakage). It goes into a reactiveVal so app reactives
       #    gated on it (via make_request()/token_ready()) re-run on login.
       .set_session_token(session, access_token)
+      if (!isTRUE(sandbox)) shiny::updateQueryString("", mode = "replace", session = session)
 
       # 2) Load /me for first_name / last_name (for header). Guarded so an
       #    expired or rejected token degrades gracefully instead of crashing
@@ -216,10 +217,24 @@ server_wrapper <- function(
 
     })
 
+    # A rejected API token invalidates the session instead of leaving protected data visible.
+    observe({
+      if (!token_ready() && !is.null(isolate(user_token())$access_token)) {
+        userinfo(NULL)
+        user_token(list(error = "session_expired"))
+      }
+    })
+
+    observeEvent(input$csiapps_sign_in, {
+      logged_out(FALSE)
+      user_token(NULL)
+      .redirect_current(session)
+    })
+
     # Auth status UI: first/last name + logout
     output$auth_status <- renderUI({
       if (isTRUE(logged_out())) {
-        return(tags$p("Signed out. Select Sign in to continue."))
+        return(tagList(tags$p("Signed out. Select Sign in to continue."), actionButton("csiapps_sign_in", "Sign in")))
       }
 
       tok <- user_token()
@@ -230,7 +245,8 @@ server_wrapper <- function(
 
       if (!is.null(tok$error)) {
         return(tagList(
-          tags$p("Authentication error (see logs).")
+          tags$p(if (identical(tok$error, "session_expired")) "Your session has expired. Please sign in again." else "Authentication error (see logs)."),
+          actionButton("csiapps_sign_in", "Sign in")
         ))
       }
 

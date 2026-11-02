@@ -15,7 +15,10 @@ make_request(
   verbose = FALSE,
   paginate = FALSE,
   max_pages = 50,
-  sandbox = is_sandbox_mode()
+  sandbox = is_sandbox_mode(),
+  query_multi = "error",
+  retry_max_tries = 3L,
+  retry_is_transient = NULL
 )
 }
 \arguments{
@@ -35,9 +38,9 @@ make_request(
 
 \item{verbose}{If TRUE, prints request and response details to the console for debugging purposes}
 
-\item{paginate}{If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.}
+\item{paginate}{Follow \code{next} links, or use \code{count}/\code{results} with limit/offset when links are absent or null. Defaults to FALSE.}
 
-\item{max_pages}{Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops}
+\item{max_pages}{Maximum number of pages to fetch when paginate = TRUE; defaults to 50. An error is raised if more pages remain, preventing silent truncation.}
 
 \item{sandbox}{If TRUE, the request is routed to the local sandbox instead of
 the real REST API: no network call is made and no authentication is required.
@@ -51,6 +54,12 @@ to route requests to the production warehouse. See \link{csiapps-sandbox} for
 supported endpoints and limitations. In sandbox mode the HTTP-only arguments
 (\code{headers}, \code{token}, \code{timeout}, \code{max_pages}) are ignored, since no network
 request is made.}
+
+\item{query_multi}{How to encode vector query values. Defaults to \code{"error"}; use \code{"explode"} for repeated parameters such as \code{subject=1&subject=2}.}
+
+\item{retry_max_tries}{Maximum HTTP attempts per page. Defaults to 3; use 1 for writes that must not be retried automatically.}
+
+\item{retry_is_transient}{Optional response predicate passed to \code{\link[httr2:req_retry]{httr2::req_retry()}}. NULL preserves httr2's default retry policy.}
 }
 \value{
 List of parsed API responses

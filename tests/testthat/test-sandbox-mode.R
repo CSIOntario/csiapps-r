@@ -52,7 +52,8 @@ test_that("non-logical option values are treated as FALSE", {
 test_that("make_request keeps its full production signature plus sandbox", {
   expect_named(formals(make_request),
     c("endpoint", "method", "body", "query", "headers", "token",
-      "timeout", "verbose", "paginate", "max_pages", "sandbox"))
+      "timeout", "verbose", "paginate", "max_pages", "sandbox",
+      "query_multi", "retry_max_tries", "retry_is_transient"))
 })
 
 test_that("production path still requires a token when sandbox is off", {

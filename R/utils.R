@@ -240,43 +240,10 @@ fetch_profiles <- function(token = NULL, filters = list(), sandbox = is_sandbox_
     }
     return(profs)
   }
-  if (.no_token(token)) {
-    token <- .current_token()
-  }
-  if (!nzchar(token)) .auth_gate("fetch_profiles")
-
-  url    <- paste0(SITE_URL(), PROFILE_ENDPOINT)  # "/api/registration/profile/"
-  params <- c(filters, list(limit = 100L, offset = 0L))
-  all    <- list()
-
-  repeat {
-    req <- httr2::request(url) |>
-      httr2::req_headers(
-        Authorization = paste("Bearer", token),
-        Accept        = "application/json"
-      )
-
-    if (!is.null(params)) {
-      req <- do.call(httr2::req_url_query, c(list(req), params))
-    }
-
-    resp   <- httr2::req_perform(req)
-    status <- httr2::resp_status(resp)
-    txt    <- httr2::resp_body_string(resp)
-
-    if (status >= 400) {
-      stop(sprintf("fetch_profiles failed (%s): %s", status, txt))
-    }
-
-    payload <- jsonlite::fromJSON(txt, simplifyVector = FALSE)
-    all     <- c(all, payload$results %||% list())
-
-    url    <- payload$`next`
-    params <- NULL  # `next` already has query params
-    if (is.null(url) || !nzchar(url)) break
-  }
-
-  all
+  pages <- make_request(PROFILE_ENDPOINT, token = token, query = c(filters, list(limit = 100L)),
+                        headers = list(Accept = "application/json"), paginate = TRUE,
+                        max_pages = .Machine$integer.max, sandbox = FALSE)
+  unlist(lapply(pages, function(p) p$results %||% list()), recursive = FALSE)
 }
 
 #' Fetch a single profile from the CSIAPPS registration API
@@ -313,31 +280,9 @@ fetch_profile <- function(token = NULL, profile_id, sandbox = is_sandbox_mode())
     hit <- Filter(function(p) identical(as.integer(p$id), as.integer(profile_id)), .sandbox_env$profiles)
     return(if (length(hit)) hit[[1]] else NULL)
   }
-  if (.no_token(token)) {
-    token <- .current_token()
-  }
-  if (!nzchar(token)) .auth_gate("fetch_profile")
-
-  # URL-encode the id so an unusual value can't alter the request path.
   enc_id <- utils::URLencode(as.character(profile_id), reserved = TRUE)
-  path   <- sprintf("%s%s", PROFILE_ENDPOINT, enc_id)  # "/api/registration/profile/{id}"
-  url    <- paste0(SITE_URL(), path)
-
-  req <- httr2::request(url) |>
-    httr2::req_headers(
-      Authorization = paste("Bearer", token),
-      Accept        = "application/json"
-    )
-
-  resp   <- httr2::req_perform(req)
-  status <- httr2::resp_status(resp)
-  txt    <- httr2::resp_body_string(resp)
-
-  if (status >= 400) {
-    stop(sprintf("fetch_profile failed (%s): %s", status, txt))
-  }
-
-  jsonlite::fromJSON(txt, simplifyVector = FALSE)
+  make_request(paste0(PROFILE_ENDPOINT, enc_id), token = token,
+               headers = list(Accept = "application/json"), sandbox = FALSE)
 }
 
 # -------------------------------------------------------------------
@@ -386,9 +331,12 @@ pkce_state_decode <- function(state) {
 # -------------------------------------------------------------------
 
 exchange_code_for_token <- function(code, code_verifier = NULL) {
-  req <- httr2::request(CSIAPPS_TOKEN_URL()) |>
-    httr2::req_auth_basic(Sys.getenv("CSIAPPS_CLIENT_ID"), Sys.getenv("CSIAPPS_CLIENT_SECRET")) |>
+  req <- httr2::request(CSIAPPS_TOKEN_URL())
+  secret <- Sys.getenv("CSIAPPS_CLIENT_SECRET")
+  if (nzchar(secret)) req <- httr2::req_auth_basic(req, Sys.getenv("CSIAPPS_CLIENT_ID"), secret)
+  req <- req |>
     httr2::req_body_form(
+      client_id    = Sys.getenv("CSIAPPS_CLIENT_ID"),
       grant_type    = "authorization_code",
       code          = code,
       redirect_uri  = Sys.getenv("CSIAPPS_REDIRECT_URI"),
@@ -503,7 +451,7 @@ is_sandbox_mode <- function() {
   if (!is.null(domain)) {
     rv  <- .token_rv(domain)
     tok <- tryCatch(rv(), error = function(e) shiny::isolate(rv()))
-    if (!.no_token(tok)) return(tok)
+    return(if (.no_token(tok)) "" else tok)
   }
   tok <- Sys.getenv("CSIAPPS_ACCESS_TOKEN")
   if (.no_token(tok)) "" else tok
@@ -551,8 +499,11 @@ token_ready <- function() {
 #' @param token Authentication token. When not provided, it is resolved for the current Shiny session (the token stored by [server_wrapper()]), falling back to the `CSIAPPS_ACCESS_TOKEN` environment variable outside a session. Inside a Shiny session a not-yet-available token does not error: the request is cancelled quietly with [shiny::req()], and the calling reactive or observer re-runs automatically once login completes (see [token_ready()]). Outside Shiny a missing token raises an error.
 #' @param timeout Request timeout in seconds; defaults to 20
 #' @param verbose If TRUE, prints request and response details to the console for debugging purposes
-#' @param paginate If TRUE, will attempt to paginate through results using "next" links in the API response. Defaults to FALSE.
-#' @param max_pages Maximum number of pages to fetch when paginate = TRUE; defaults to 50 to prevent infinite loops
+#' @param paginate Follow `next` links, or use `count`/`results` with limit/offset when links are absent or null. Defaults to FALSE.
+#' @param max_pages Maximum number of pages to fetch when paginate = TRUE; defaults to 50. An error is raised if more pages remain, preventing silent truncation.
+#' @param query_multi How to encode vector query values. Defaults to `"error"`; use `"explode"` for repeated parameters such as `subject=1&subject=2`.
+#' @param retry_max_tries Maximum HTTP attempts per page. Defaults to 3; use 1 for writes that must not be retried automatically.
+#' @param retry_is_transient Optional response predicate passed to [httr2::req_retry()]. NULL preserves httr2's default retry policy.
 #' @param sandbox If TRUE, the request is routed to the local sandbox instead of
 #' the real REST API: no network call is made and no authentication is required.
 #' Only the **warehouse** endpoints are emulated; registration and auth endpoints
@@ -579,7 +530,10 @@ make_request <- function(
     verbose = FALSE,
     paginate = FALSE,
     max_pages = 50,
-    sandbox = is_sandbox_mode()
+    sandbox = is_sandbox_mode(),
+    query_multi = "error",
+    retry_max_tries = 3L,
+    retry_is_transient = NULL
   ) {
   if (isTRUE(sandbox)) {
     return(.make_sandbox_request(
@@ -597,7 +551,7 @@ make_request <- function(
   # share a token.
   if (.no_token(token)) token <- .current_token()
 
-  .make_http_request(
+  tryCatch(.make_http_request(
     endpoint  = endpoint,
     method    = method,
     body      = body,
@@ -607,8 +561,15 @@ make_request <- function(
     timeout   = timeout,
     verbose   = verbose,
     paginate  = paginate,
-    max_pages = max_pages
-  )
+    max_pages = max_pages,
+    query_multi = query_multi,
+    retry_max_tries = retry_max_tries,
+    retry_is_transient = retry_is_transient
+  ), httr2_http_401 = function(e) {
+    domain <- shiny::getDefaultReactiveDomain()
+    if (!is.null(domain) && identical(token, shiny::isolate(.current_token()))) .set_session_token(domain, NULL)
+    stop(e)
+  })
 }
 
 .make_http_request <- function(
@@ -621,7 +582,10 @@ make_request <- function(
     timeout = 20L,
     verbose = FALSE,
     paginate = FALSE,
-    max_pages = 50
+    max_pages = 50,
+    query_multi = "error",
+    retry_max_tries = 3L,
+    retry_is_transient = NULL
   ) {
   if (.no_token(token)) .auth_gate("make_request")
 
@@ -630,17 +594,18 @@ make_request <- function(
     httr2::req_method(toupper(method)) |>
     httr2::req_auth_bearer_token(token) |>
     httr2::req_timeout(timeout) |>
-    httr2::req_retry(max_tries = 3, max_seconds = 10) # might want to play with this
+    httr2::req_retry(max_tries = retry_max_tries, max_seconds = 10, is_transient = retry_is_transient)
 
   if (!is.null(body)) req <- req |> httr2::req_body_json(body)
-  if (length(query) > 0) req <- req |> httr2::req_url_query(!!!query)
+  if (length(query) > 0) req <- req |> httr2::req_url_query(!!!query, .multi = query_multi)
   if (length(headers) > 0) req <- req |> httr2::req_headers(!!!headers)
 
   parse_response <- function(resp) {
     status <- httr2::resp_status(resp)
+    if (!length(resp$body)) return(list())
     txt    <- httr2::resp_body_string(resp)
 
-    if(length(txt) == 0) {
+    if(!nzchar(txt)) {
       return(list())
     }
 
@@ -660,25 +625,26 @@ make_request <- function(
     )
   }
 
-  if(paginate) {
-
-    next_by_link <- function(resp, req) {
-      next_url <- httr2::resp_body_json(resp, simplifyVector = FALSE)$`next`
-      if (is.null(next_url)) return(NULL)
-      req |> httr2::req_url(next_url)
-    }
-
-    resps <- req |> httr2::req_perform_iterative(
-      next_req = next_by_link,
-      max_reqs = max_pages,
-      progress = FALSE
-    )
-
-    return(lapply(resps, parse_response))
-
-  } else{
-    return(parse_response(httr2::req_perform(req)))
+  if (!isTRUE(paginate)) return(parse_response(httr2::req_perform(req)))
+  stopifnot(length(max_pages) == 1L, is.finite(max_pages), max_pages >= 1)
+  pages <- list()
+  offset <- as.numeric(query$offset %||% 0)
+  repeat {
+    page <- parse_response(httr2::req_perform(req))
+    pages[[length(pages) + 1L]] <- page
+    offset <- offset + length(page$results %||% list())
+    next_url <- page$`next`
+    if (!is.null(next_url) && nzchar(next_url)) {
+      next_req <- httr2::req_url(req, next_url)
+    } else if (!is.null(page$count) && !is.null(page$results)) {
+      if (offset >= page$count) break
+      if (!length(page$results)) stop("Pagination ended before all records were returned.", call. = FALSE)
+      next_req <- httr2::req_url_query(req, offset = offset)
+    } else break
+    if (length(pages) >= max_pages) stop("Pagination exceeds max_pages; increase the limit to retrieve all records.", call. = FALSE)
+    req <- next_req
   }
+  pages
 }
 
 #' Fetch the current AMS athlete mapping

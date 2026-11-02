@@ -16,7 +16,10 @@ make_request(
   verbose = FALSE,
   paginate = FALSE,
   max_pages = 50,
-  sandbox = is_sandbox_mode()
+  sandbox = is_sandbox_mode(),
+  query_multi = "error",
+  retry_max_tries = 3L,
+  retry_is_transient = NULL
 )
 ```
 
@@ -68,13 +71,14 @@ make_request(
 
 - paginate:
 
-  If TRUE, will attempt to paginate through results using "next" links
-  in the API response. Defaults to FALSE.
+  Follow [`next`](https://rdrr.io/r/base/Control.html) links, or use
+  `count`/`results` with limit/offset when links are absent or null.
+  Defaults to FALSE.
 
 - max_pages:
 
-  Maximum number of pages to fetch when paginate = TRUE; defaults to 50
-  to prevent infinite loops
+  Maximum number of pages to fetch when paginate = TRUE; defaults to 50.
+  An error is raised if more pages remain, preventing silent truncation.
 
 - sandbox:
 
@@ -96,6 +100,22 @@ make_request(
   for supported endpoints and limitations. In sandbox mode the HTTP-only
   arguments (`headers`, `token`, `timeout`, `max_pages`) are ignored,
   since no network request is made.
+
+- query_multi:
+
+  How to encode vector query values. Defaults to `"error"`; use
+  `"explode"` for repeated parameters such as `subject=1&subject=2`.
+
+- retry_max_tries:
+
+  Maximum HTTP attempts per page. Defaults to 3; use 1 for writes that
+  must not be retried automatically.
+
+- retry_is_transient:
+
+  Optional response predicate passed to
+  [`httr2::req_retry()`](https://httr2.r-lib.org/reference/req_retry.html).
+  NULL preserves httr2's default retry policy.
 
 ## Value
 
